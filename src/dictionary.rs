@@ -56,8 +56,33 @@ impl fmt::Display for Outline {
 #[serde(transparent)]
 pub struct Word(Rc<str>);
 
+impl Word {
+    pub fn categorize(&self) -> WordCategory {
+        if self.0.starts_with("{^") {
+            WordCategory::Prefix
+        } else if self.0.ends_with("^}") {
+            WordCategory::Suffix
+        } else if self.0.contains('{') {
+            WordCategory::Special
+        } else if self.0.chars().all(char::is_lowercase) {
+            WordCategory::Common
+        } else {
+            WordCategory::Name
+        }
+    }
+}
+
 impl fmt::Display for Word {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&self.0, f)
     }
+}
+
+#[derive(Debug, Clone, Copy, Hash, Eq, Ord, PartialEq, PartialOrd)]
+pub enum WordCategory {
+    Common,
+    Name,
+    Prefix,
+    Suffix,
+    Special,
 }
