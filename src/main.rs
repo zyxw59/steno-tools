@@ -1,4 +1,9 @@
-use std::{collections::{BTreeSet, BTreeMap}, fs::File, io::BufReader, path::PathBuf};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fs::File,
+    io::BufReader,
+    path::PathBuf,
+};
 
 use clap::Parser;
 use serde_json::from_reader;
@@ -87,6 +92,9 @@ impl Compare {
 #[derive(Debug, clap::Args)]
 struct Categorize {
     file: PathBuf,
+    #[arg(short, long)]
+    summarize: bool,
+    print: Vec<dictionary::WordCategory>,
 }
 
 impl Categorize {
@@ -94,10 +102,21 @@ impl Categorize {
         let dictionary: Dictionary = from_reader(BufReader::new(File::open(&self.file)?))?;
         let mut cat_map = BTreeMap::<_, BTreeSet<_>>::new();
         for word in dictionary.words().keys() {
-            cat_map.entry(word.categorize()).or_default().insert(word.clone());
+            cat_map
+                .entry(word.categorize())
+                .or_default()
+                .insert(word.clone());
         }
-        for (cat, words) in &cat_map {
-            println!("{cat:?}: {} words", words.len());
+        if self.summarize || self.print.is_empty() {
+            for (cat, words) in &cat_map {
+                println!("{cat:?}: {} words", words.len());
+            }
+        }
+        for cat in &self.print {
+            println!("{cat:?}:");
+            for word in cat_map.get(cat).into_iter().flatten() {
+                println!("{word}");
+            }
         }
         Ok(())
     }

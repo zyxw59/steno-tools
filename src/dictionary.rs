@@ -59,9 +59,9 @@ pub struct Word(Rc<str>);
 impl Word {
     pub fn categorize(&self) -> WordCategory {
         if self.0.starts_with("{^") {
-            WordCategory::Prefix
-        } else if self.0.ends_with("^}") {
             WordCategory::Suffix
+        } else if self.0.ends_with("^}") {
+            WordCategory::Prefix
         } else if self.0.contains('{') {
             WordCategory::Special
         } else if self.0.chars().all(char::is_lowercase) {
@@ -78,7 +78,7 @@ impl fmt::Display for Word {
     }
 }
 
-#[derive(Debug, Clone, Copy, Hash, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Hash, Eq, Ord, PartialEq, PartialOrd, clap::ValueEnum)]
 pub enum WordCategory {
     Common,
     Name,
