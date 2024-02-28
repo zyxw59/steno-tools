@@ -1,14 +1,17 @@
 use std::{collections::BTreeSet, fs::File, io::BufReader, path::PathBuf};
 
 use clap::Parser;
-use indexmap::IndexMap;
-use itertools::Itertools;
 use serde_json::from_reader;
+
+mod dictionary;
+
+use dictionary::Dictionary;
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     match args.command {
         Command::Compare(args) => args.execute(),
+        Command::Categorize(args) => args.execute(),
     }
 }
 
@@ -21,6 +24,7 @@ struct Args {
 #[derive(Debug, clap::Subcommand)]
 enum Command {
     Compare(Compare),
+    Categorize(Categorize),
 }
 
 #[derive(Debug, clap::Args)]
@@ -31,22 +35,13 @@ struct Compare {
 
 impl Compare {
     fn execute(&self) -> anyhow::Result<()> {
-        let dict_1: IndexMap<String, String> =
+        let dict_1: Dictionary =
             from_reader(BufReader::new(File::open(&self.file_1)?))?;
-        let dict_2: IndexMap<String, String> =
+        let dict_2: Dictionary =
             from_reader(BufReader::new(File::open(&self.file_2)?))?;
-        let reverse_1 = dict_1
-            .iter()
-            .map(|(key, value)| (value, key))
-            .into_grouping_map()
-            .collect::<BTreeSet<_>>();
-        let reverse_2 = dict_2
-            .iter()
-            .map(|(key, value)| (value, key))
-            .into_grouping_map()
-            .collect::<BTreeSet<_>>();
-        let words_1 = dict_1.values().collect::<BTreeSet<_>>();
-        let words_2 = dict_2.values().collect::<BTreeSet<_>>();
+
+        let words_1 = dict_1.words().keys().collect::<BTreeSet<_>>();
+        let words_2 = dict_2.words().keys().collect::<BTreeSet<_>>();
 
         println!("Unique words");
         println!(
@@ -62,20 +57,30 @@ impl Compare {
         // }
         let common_words = words_1.intersection(&words_2);
         println!("\nUnique outlines");
-        let empty_set = BTreeSet::new();
         for word in common_words {
-            let outlines_1 = reverse_1.get(word).unwrap_or(&empty_set);
-            let outlines_2 = reverse_2.get(word).unwrap_or(&empty_set);
+            let outlines_1 = dict_1.words().get(word).into_iter().flatten().collect::<BTreeSet<_>>();
+            let outlines_2 = dict_2.words().get(word).into_iter().flatten().collect::<BTreeSet<_>>();
             if outlines_1 != outlines_2 {
                 println!("{word}:");
-                for outline in outlines_1.difference(outlines_2) {
+                for outline in outlines_1.difference(&outlines_2) {
                     println!("\t{outline}");
                 }
-                for outline in outlines_2.difference(outlines_1) {
+                for outline in outlines_2.difference(&outlines_1) {
                     println!("\t\t{outline}");
                 }
             }
         }
+        Ok(())
+    }
+}
+
+#[derive(Debug, clap::Args)]
+struct Categorize {
+    file: PathBuf,
+}
+
+impl Categorize {
+    fn execute(&self) -> anyhow::Result<()> {
         Ok(())
     }
 }

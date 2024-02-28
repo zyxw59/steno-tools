@@ -110,6 +110,7 @@ dependencies = [
  "clap",
  "indexmap",
  "itertools",
+ "serde",
  "serde_json",
 ]
 
