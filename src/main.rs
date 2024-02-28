@@ -8,7 +8,10 @@ use std::{
 use clap::Parser;
 use serde_json::from_reader;
 
+mod chord;
 mod dictionary;
+mod pronounce;
+mod wrapper_impls;
 
 use dictionary::Dictionary;
 
@@ -62,7 +65,7 @@ impl Compare {
         // }
         let common_words = words_1.intersection(&words_2);
         println!("\nUnique outlines");
-        for word in common_words {
+        for &word in common_words {
             let outlines_1 = dict_1
                 .words()
                 .get(word)
@@ -120,4 +123,10 @@ impl Categorize {
         }
         Ok(())
     }
+}
+
+struct GenerateOutlines {
+    wordlist: PathBuf,
+    pronunciation_file: PathBuf,
+    phoneme_map: PathBuf,
 }

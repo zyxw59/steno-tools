@@ -1,6 +1,5 @@
 use std::{
     collections::{btree_map::Entry, BTreeMap},
-    fmt,
     rc::Rc,
 };
 
@@ -20,6 +19,15 @@ impl Dictionary {
 
     pub fn words(&self) -> &BTreeMap<Word, Vec<Outline>> {
         &self.words
+    }
+
+    pub fn insert(&mut self, word: Word, outline: Outline) -> Result<(), Word> {
+        match self.outlines.entry(outline.clone()) {
+            indexmap::map::Entry::Occupied(entry) => return Err(entry.get().clone()),
+            indexmap::map::Entry::Vacant(entry) => entry.insert(word.clone()),
+        };
+        self.words.entry(word.clone()).or_default().push(outline);
+        Ok(())
     }
 }
 
@@ -42,19 +50,17 @@ impl<'de> Deserialize<'de> for Dictionary {
     }
 }
 
-#[derive(Debug, Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct Outline(Rc<str>);
+crate::fmt_impls!(Outline);
+crate::deref_impls!(Outline as str);
 
-impl fmt::Display for Outline {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.0, f)
-    }
-}
-
-#[derive(Debug, Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
+#[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct Word(Rc<str>);
+crate::fmt_impls!(Word);
+crate::deref_impls!(Word as str);
 
 impl Word {
     pub fn categorize(&self) -> WordCategory {
@@ -69,12 +75,6 @@ impl Word {
         } else {
             WordCategory::Name
         }
-    }
-}
-
-impl fmt::Display for Word {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.0, f)
     }
 }
 
