@@ -180,8 +180,9 @@ impl Theory {
                 }
             }
         }
+        let _ = write!(outline, "/{current_chord}");
 
-        Some(outline.into())
+        Some((&outline[1..]).into())
     }
 
     fn get_onset(&self, sounds: &[Phoneme]) -> Option<&[Chord]> {
