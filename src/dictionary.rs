@@ -5,9 +5,11 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize)]
 pub struct Dictionary {
+    #[serde(flatten)]
     outlines: BTreeMap<Outline, Word>,
+    #[serde(skip)]
     words: BTreeMap<Word, BTreeSet<Outline>>,
 }
 
