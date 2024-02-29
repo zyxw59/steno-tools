@@ -27,7 +27,13 @@ impl Dictionary {
 
     pub fn insert(&mut self, word: Word, outline: Outline) -> Result<(), Word> {
         match self.outlines.entry(outline.clone()) {
-            indexmap::map::Entry::Occupied(entry) => return Err(entry.get().clone()),
+            indexmap::map::Entry::Occupied(entry) => {
+                if entry.get() != &word {
+                    return Err(entry.get().clone());
+                } else {
+                    return Ok(());
+                }
+            }
             indexmap::map::Entry::Vacant(entry) => entry.insert(word.clone()),
         };
         self.words.entry(word.clone()).or_default().push(outline);
