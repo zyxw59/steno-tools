@@ -1,4 +1,4 @@
-use std::{cmp, fmt, str::FromStr};
+use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
@@ -80,6 +80,31 @@ impl Chord {
             | Self::Z_RIGHT)
             .contains(self)
     }
+
+    /// Returns whether this chord is entirely before the other chord in steno order.
+    pub fn before(self, other: Chord) -> bool {
+        self.highest_flag_index() < other.lowest_flag_index()
+    }
+
+    /// Returns whether the two chords conflict (have overlapping ranges in steno order). '*' is
+    /// ignored for determining ranges, but if both chords contain '*', they do conflict.
+    pub fn conflicts(self, other: Chord) -> bool {
+        if (self & other).is_empty() {
+            let this = self & !Self::STAR;
+            let other = other & !Self::STAR;
+            !(this.before(other) || other.before(this))
+        } else {
+            true
+        }
+    }
+
+    fn highest_flag_index(self) -> i32 {
+        (<Self as bitflags::Flags>::Bits::BITS - self.bits().leading_zeros()) as i32 - 1
+    }
+
+    fn lowest_flag_index(self) -> i32 {
+        self.bits().trailing_zeros() as i32
+    }
 }
 
 impl fmt::Debug for Chord {
@@ -156,7 +181,7 @@ impl FromStr for Chord {
                 }
                 _ => return Err(ChordParseError::UnexpectedChar(c)),
             };
-            if add <= value {
+            if !value.before(add) {
                 return Err(ChordParseError::OutOfOrder(c));
             }
             post_hyphen |= add.implicit_hyphen();
@@ -178,20 +203,6 @@ impl ChordParseError {
     fn char(self) -> char {
         let (Self::UnexpectedChar(c) | Self::OutOfOrder(c)) = self;
         c
-    }
-}
-
-impl cmp::PartialOrd for Chord {
-    fn partial_cmp(&self, other: &Chord) -> Option<cmp::Ordering> {
-        if self == other {
-            Some(cmp::Ordering::Equal)
-        } else if self.iter().all(|this| this.bits() < other.bits()) {
-            Some(cmp::Ordering::Less)
-        } else if self.iter().all(|this| this.bits() > other.bits()) {
-            Some(cmp::Ordering::Greater)
-        } else {
-            None
-        }
     }
 }
 
@@ -258,5 +269,19 @@ mod tests {
     fn chord_invalid_serde(original: &str, expected: ChordParseError) {
         let actual = original.parse::<Chord>().unwrap_err();
         assert_eq!(actual, expected);
+    }
+
+    #[test_case("ST", "-TS", true, false ; "before")]
+    #[test_case("SH", "KWR", false, true ; "overlap")]
+    #[test_case("-FR", "*T", false, false ; "ignore star")]
+    #[test_case("*FR", "*T", false, true ; "star conflicts")]
+    fn compare_chords(left: &str, right: &str, before: bool, conflicts: bool) -> anyhow::Result<()> {
+        let left: Chord = left.parse()?;
+        let right: Chord = right.parse()?;
+        println!("{left:#}: {:08x}", left.bits());
+        println!("{right:#}: {:08x}", right.bits());
+        assert_eq!(left.before(right), before);
+        assert_eq!(left.conflicts(right), conflicts);
+        Ok(())
     }
 }

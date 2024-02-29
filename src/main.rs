@@ -1,7 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::File,
-    io::BufReader,
+    io::{BufRead, BufReader},
     path::PathBuf,
 };
 
@@ -13,13 +13,14 @@ mod dictionary;
 mod pronounce;
 mod wrapper_impls;
 
-use dictionary::Dictionary;
+use dictionary::{Dictionary, Outline, Word};
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     match args.command {
         Command::Compare(args) => args.execute(),
         Command::Categorize(args) => args.execute(),
+        Command::GenerateOutlines(args) => args.execute(),
     }
 }
 
@@ -35,6 +36,8 @@ enum Command {
     Compare(Compare),
     /// Categorize the words in a dictionary file
     Categorize(Categorize),
+    /// Generate outlines given a word list, pronunciation dictionary, and theory
+    GenerateOutlines(GenerateOutlines),
 }
 
 #[derive(Debug, clap::Args)]
@@ -125,8 +128,48 @@ impl Categorize {
     }
 }
 
+#[derive(Debug, clap::Args)]
 struct GenerateOutlines {
     wordlist: PathBuf,
     pronunciation_file: PathBuf,
-    phoneme_map: PathBuf,
+    theory_file: PathBuf,
+}
+
+impl GenerateOutlines {
+    fn execute(&self) -> anyhow::Result<()> {
+        let pronunciation_dict: pronounce::Dictionary =
+            from_reader(BufReader::new(File::open(&self.pronunciation_file)?))?;
+        let theory: pronounce::Theory =
+            serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
+        let mut valid_outlines = Dictionary::new();
+        let mut conflicts = BTreeMap::<Outline, BTreeSet<Word>>::new();
+        let mut no_pronunciation = Vec::new();
+        let mut no_outlines = Vec::new();
+        let words = BufReader::new(File::open(&self.wordlist)?)
+            .lines()
+            .map_while(Result::ok)
+            .map(Word::from);
+        for word in words {
+            let prons = pronunciation_dict.get(&word);
+            if prons.is_empty() {
+                no_pronunciation.push(word.clone())
+            }
+            for pron in prons {
+                if let Some(outline) = theory.get_outline(pron) {
+                    if let Err(conflict) = valid_outlines.insert(word.clone(), outline.clone()) {
+                        let conflict_entry = conflicts.entry(outline).or_default();
+                        conflict_entry.insert(conflict);
+                        conflict_entry.insert(word.clone());
+                    }
+                } else {
+                    no_outlines.push((word.clone(), pron));
+                }
+            }
+        }
+        println!("{valid_outlines:#?}");
+        println!("{conflicts:#?}");
+        // println!("{no_pronunciation:#?}");
+        // println!("{no_outlines:#?}");
+        Ok(())
+    }
 }

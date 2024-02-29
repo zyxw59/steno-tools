@@ -6,13 +6,17 @@ use std::{
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct Dictionary {
     outlines: IndexMap<Outline, Word>,
     words: BTreeMap<Word, Vec<Outline>>,
 }
 
 impl Dictionary {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn outlines(&self) -> &IndexMap<Outline, Word> {
         &self.outlines
     }
@@ -56,6 +60,12 @@ pub struct Outline(Rc<str>);
 crate::fmt_impls!(Outline);
 crate::deref_impls!(Outline as str);
 
+impl<T: Into<Rc<str>>> From<T> for Outline {
+    fn from(s: T) -> Self {
+        Self(s.into())
+    }
+}
+
 #[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
 #[serde(transparent)]
 pub struct Word(Rc<str>);
@@ -75,6 +85,12 @@ impl Word {
         } else {
             WordCategory::Name
         }
+    }
+}
+
+impl<T: Into<Rc<str>>> From<T> for Word {
+    fn from(s: T) -> Self {
+        Self(s.into())
     }
 }
 
