@@ -166,8 +166,15 @@ impl GenerateOutlines {
                 }
             }
         }
-        println!("{valid_outlines:#?}");
-        println!("{conflicts:#?}");
+        for outline in conflicts.keys() {
+            valid_outlines.remove_outline(outline);
+        }
+        println!("{} valid words", valid_outlines.num_words());
+        println!("{} conflicting outlines", conflicts.len());
+        println!("{} words with no pronunciation", no_pronunciation.len());
+        println!("{} pronunciations with no outline", no_outlines.len());
+        // println!("{valid_outlines:#?}");
+        // println!("{conflicts:#?}");
         // println!("{no_pronunciation:#?}");
         // println!("{no_outlines:#?}");
         Ok(())
