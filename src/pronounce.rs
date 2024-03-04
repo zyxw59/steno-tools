@@ -96,26 +96,33 @@ impl Phonology {
     #[allow(unused)]
     pub fn syllabize_word<'a>(&self, word: &'a [Phoneme]) -> anyhow::Result<Vec<&'a [Phoneme]>> {
         let mut syllables = Vec::new();
-        let mut word = word;
-        while !word.is_empty() {
-            let (syllable, rest) = word.split_at(self.syllabize_first(word));
-            syllables.push(syllable);
-            word = rest;
+        let (mut onset_start, mut coda_start) = self.syllabize_first(word, 0);
+        if onset_start != 0 {
+            return Err(anyhow::anyhow!("failed to syllabize first {onset_start} phonemes"));
         }
+        while onset_start < word.len() {
+            let (next_onset, next_coda) = self.syllabize_first(word, coda_start);
+            syllables.push(&word[onset_start..next_onset]);
+            onset_start = next_onset;
+            coda_start = next_coda;
+        }
+
         Ok(syllables)
     }
 
-    /// Returns the index of the start of the next syllable
-    fn syllabize_first(&self, word: &[Phoneme]) -> usize {
+    /// Returns the index of the start of the next syllable, and the index after the vowel in that
+    /// syllable.
+    fn syllabize_first(&self, word: &[Phoneme], start_at: usize) -> (usize, usize) {
         // find the first vowel
-        let Some(vowel_idx) = word.iter().position(|ph| self.vowels.contains(ph)) else {
-            return word.len();
+        let Some(vowel_idx) = word[start_at..].iter().position(|ph| self.vowels.contains(ph)) else {
+            return (word.len(), word.len());
         };
+        let vowel_idx = vowel_idx + start_at;
         // work backwards to find the maximally valid onset
         let mut onset = word[..vowel_idx].iter().enumerate();
         let last_item = match onset.next() {
             Some((idx, ph)) if self.onset_singles.contains(ph) => (idx, ph),
-            _ => return vowel_idx,
+            _ => return (vowel_idx, vowel_idx + 1),
         };
         let result = onset.try_fold(last_item, |(following_idx, following_ph), (idx, ph)| {
             if self
@@ -129,7 +136,7 @@ impl Phonology {
             }
         });
         match result {
-            Ok((idx, _)) | Err(idx) => idx,
+            Ok((idx, _)) | Err(idx) => (idx, vowel_idx + 1),
         }
     }
 }
