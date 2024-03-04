@@ -85,6 +85,55 @@ pub struct Phoneme(Rc<str>);
 crate::fmt_impls!(Phoneme);
 crate::deref_impls!(Phoneme as str);
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct Phonology {
+    onset_singles: BTreeSet<Phoneme>,
+    onset_clusters: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
+    vowels: BTreeSet<Phoneme>,
+}
+
+impl Phonology {
+    #[allow(unused)]
+    pub fn syllabize_word<'a>(&self, word: &'a [Phoneme]) -> anyhow::Result<Vec<&'a [Phoneme]>> {
+        let mut syllables = Vec::new();
+        let mut word = word;
+        while !word.is_empty() {
+            let (syllable, rest) = word.split_at(self.syllabize_first(word));
+            syllables.push(syllable);
+            word = rest;
+        }
+        Ok(syllables)
+    }
+
+    /// Returns the index of the start of the next syllable
+    fn syllabize_first(&self, word: &[Phoneme]) -> usize {
+        // find the first vowel
+        let Some(vowel_idx) = word.iter().position(|ph| self.vowels.contains(ph)) else {
+            return word.len();
+        };
+        // work backwards to find the maximally valid onset
+        let mut onset = word[..vowel_idx].iter().enumerate();
+        let last_item = match onset.next() {
+            Some((idx, ph)) if self.onset_singles.contains(ph) => (idx, ph),
+            _ => return vowel_idx,
+        };
+        let result = onset.try_fold(last_item, |(following_idx, following_ph), (idx, ph)| {
+            if self
+                .onset_clusters
+                .get(ph)
+                .map_or(false, |followers| followers.contains(following_ph))
+            {
+                Ok((idx, ph))
+            } else {
+                Err(following_idx)
+            }
+        });
+        match result {
+            Ok((idx, _)) | Err(idx) => idx,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Theory {
     vowels: BTreeMap<Pronunciation, Vec<Chord>>,
