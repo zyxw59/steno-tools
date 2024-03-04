@@ -1,4 +1,8 @@
-use std::{collections::BTreeMap, fmt, rc::Rc};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    rc::Rc,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +18,10 @@ pub struct Dictionary {
 
 impl Dictionary {
     pub fn get(&self, word: &Word) -> &[Pronunciation] {
-        self.entries.get(&*word.to_ascii_uppercase()).map(|ps| &**ps).unwrap_or(&[])
+        self.entries
+            .get(&*word.to_ascii_uppercase())
+            .map(|ps| &**ps)
+            .unwrap_or(&[])
     }
 }
 
