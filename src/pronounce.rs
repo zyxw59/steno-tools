@@ -94,22 +94,22 @@ pub struct Phonology<P: Ord> {
 
 impl<P: Ord> Phonology<P> {
     #[allow(unused)]
-    pub fn syllabize_word<'a>(&self, word: &'a [P]) -> anyhow::Result<Vec<&'a [P]>> {
-        let mut syllables = Vec::new();
+    pub fn syllabize_word<'p, 'w>(
+        &'p self,
+        word: &'w [P],
+    ) -> anyhow::Result<SyllableIterator<'p, 'w, P>> {
         let (mut onset_start, mut coda_start) = self.syllabize_first(word, 0);
         if onset_start != 0 {
             return Err(anyhow::anyhow!(
                 "failed to syllabize first {onset_start} phonemes"
             ));
         }
-        while onset_start < word.len() {
-            let (next_onset, next_coda) = self.syllabize_first(word, coda_start);
-            syllables.push(&word[onset_start..next_onset]);
-            onset_start = next_onset;
-            coda_start = next_coda;
-        }
-
-        Ok(syllables)
+        Ok(SyllableIterator {
+            onset_start,
+            coda_start,
+            word,
+            phonology: self,
+        })
     }
 
     /// Returns the index of the start of the next syllable, and the index after the vowel in that
@@ -142,6 +142,30 @@ impl<P: Ord> Phonology<P> {
         });
         match result {
             Ok((idx, _)) | Err(idx) => (idx, vowel_idx + 1),
+        }
+    }
+}
+
+pub struct SyllableIterator<'p, 'w, P: Ord> {
+    phonology: &'p Phonology<P>,
+    word: &'w [P],
+    onset_start: usize,
+    coda_start: usize,
+}
+
+impl<'p, 'w, P: Ord> Iterator for SyllableIterator<'p, 'w, P> {
+    type Item = &'w [P];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.onset_start >= self.word.len() {
+            None
+        } else {
+            let (next_onset, next_coda) =
+                self.phonology.syllabize_first(self.word, self.coda_start);
+            let item = &self.word[self.onset_start..next_onset];
+            self.onset_start = next_onset;
+            self.coda_start = next_coda;
+            Some(item)
         }
     }
 }
@@ -280,10 +304,10 @@ mod tests {
         Ok(())
     }
 
-    #[test_case("spun", &[b"spun"] ; "one syllable")]
-    #[test_case("epsom", &[b"ep", b"som"] ; "vowel initial")]
-    #[test_case("malsprot", &[b"mal", b"sprot"] ; "complex onset")]
-    fn syllabification(word: &str, expected_syllables: &[&[u8]]) -> anyhow::Result<()> {
+    #[test_case("spun", &["spun"] ; "one syllable")]
+    #[test_case("epsom", &["ep", "som"] ; "vowel initial")]
+    #[test_case("malsprot", &["mal", "sprot"] ; "complex onset")]
+    fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let phonology = Phonology {
             onset_singles: "ptksrlmn".bytes().collect(),
             onset_clusters: [(b'p', "rl"), (b't', "r"), (b'k', "rl"), (b's', "ptklmn")]
@@ -292,7 +316,11 @@ mod tests {
                 .collect(),
             vowels: "aeiou".bytes().collect(),
         };
-        let actual_syllables = phonology.syllabize_word(word.as_bytes())?;
+        let actual_syllables = phonology
+            .syllabize_word(word.as_bytes())?
+            .map(std::str::from_utf8)
+            .collect::<Result<Vec<_>, _>>()?;
+
         assert_eq!(actual_syllables, expected_syllables);
         Ok(())
     }
