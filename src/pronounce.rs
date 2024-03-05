@@ -86,19 +86,21 @@ crate::fmt_impls!(Phoneme);
 crate::deref_impls!(Phoneme as str);
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct Phonology {
-    onset_singles: BTreeSet<Phoneme>,
-    onset_clusters: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
-    vowels: BTreeSet<Phoneme>,
+pub struct Phonology<P: Ord> {
+    onset_singles: BTreeSet<P>,
+    onset_clusters: BTreeMap<P, BTreeSet<P>>,
+    vowels: BTreeSet<P>,
 }
 
-impl Phonology {
+impl<P: Ord> Phonology<P> {
     #[allow(unused)]
-    pub fn syllabize_word<'a>(&self, word: &'a [Phoneme]) -> anyhow::Result<Vec<&'a [Phoneme]>> {
+    pub fn syllabize_word<'a>(&self, word: &'a [P]) -> anyhow::Result<Vec<&'a [P]>> {
         let mut syllables = Vec::new();
         let (mut onset_start, mut coda_start) = self.syllabize_first(word, 0);
         if onset_start != 0 {
-            return Err(anyhow::anyhow!("failed to syllabize first {onset_start} phonemes"));
+            return Err(anyhow::anyhow!(
+                "failed to syllabize first {onset_start} phonemes"
+            ));
         }
         while onset_start < word.len() {
             let (next_onset, next_coda) = self.syllabize_first(word, coda_start);
@@ -112,14 +114,17 @@ impl Phonology {
 
     /// Returns the index of the start of the next syllable, and the index after the vowel in that
     /// syllable.
-    fn syllabize_first(&self, word: &[Phoneme], start_at: usize) -> (usize, usize) {
+    fn syllabize_first(&self, word: &[P], start_at: usize) -> (usize, usize) {
         // find the first vowel
-        let Some(vowel_idx) = word[start_at..].iter().position(|ph| self.vowels.contains(ph)) else {
+        let Some(vowel_idx) = word[start_at..]
+            .iter()
+            .position(|ph| self.vowels.contains(ph))
+        else {
             return (word.len(), word.len());
         };
         let vowel_idx = vowel_idx + start_at;
         // work backwards to find the maximally valid onset
-        let mut onset = word[..vowel_idx].iter().enumerate();
+        let mut onset = word[..vowel_idx].iter().enumerate().rev();
         let last_item = match onset.next() {
             Some((idx, ph)) if self.onset_singles.contains(ph) => (idx, ph),
             _ => return (vowel_idx, vowel_idx + 1),
@@ -265,11 +270,30 @@ impl Theory {
 mod tests {
     use std::{fs::File, io::BufReader};
 
-    use super::Theory;
+    use test_case::test_case;
+
+    use super::{Phonology, Theory};
 
     #[test]
     fn load_theory() -> anyhow::Result<()> {
         let _theory: Theory = serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
+        Ok(())
+    }
+
+    #[test_case("spun", &[b"spun"] ; "one syllable")]
+    #[test_case("epsom", &[b"ep", b"som"] ; "vowel initial")]
+    #[test_case("malsprot", &[b"mal", b"sprot"] ; "complex onset")]
+    fn syllabification(word: &str, expected_syllables: &[&[u8]]) -> anyhow::Result<()> {
+        let phonology = Phonology {
+            onset_singles: "ptksrlmn".bytes().collect(),
+            onset_clusters: [(b'p', "rl"), (b't', "r"), (b'k', "rl"), (b's', "ptklmn")]
+                .into_iter()
+                .map(|(k, v)| (k, v.bytes().collect()))
+                .collect(),
+            vowels: "aeiou".bytes().collect(),
+        };
+        let actual_syllables = phonology.syllabize_word(word.as_bytes())?;
+        assert_eq!(actual_syllables, expected_syllables);
         Ok(())
     }
 }
