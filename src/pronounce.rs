@@ -212,13 +212,13 @@ impl Phonology {
         let coda = vowel_match.end();
         // work backwards to find the maximally valid onset
         let mut onset = vowel;
-        let mut following_maybe = self.onset_singles.find_at(&word[..onset], start_at);
-        while let Some(following) = following_maybe {
+        let mut regex = &self.onset_singles;
+        while let Some(following) = regex.find(&word[..onset]) {
             onset = following.start();
             let Some(prev_regex) = self.onset_clusters.get(following.as_str()) else {
                 break;
             };
-            following_maybe = prev_regex.find_at(&word[..onset], start_at);
+            regex = prev_regex;
         }
         SyllableIndices { onset, vowel, coda }
     }
@@ -263,10 +263,12 @@ impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
             let next_syllable = self
                 .phonology
                 .syllabize_one(self.word, self.prev_syllable.coda);
+            // allow double-counting vowel diphthongs in the onset
+            let coda_end = self.prev_syllable.coda.max(next_syllable.onset);
             let item = Syllable {
                 onset: &self.word[self.prev_syllable.onset..self.prev_syllable.vowel],
                 vowel: &self.word[self.prev_syllable.vowel..self.prev_syllable.coda],
-                coda: &self.word[self.prev_syllable.coda..next_syllable.onset],
+                coda: &self.word[self.prev_syllable.coda..coda_end],
             };
             self.prev_syllable = next_syllable;
             Some(item)
@@ -419,7 +421,8 @@ mod tests {
     #[test_case("epsol", &["ep", "sol"] ; "vowel initial")]
     #[test_case("talsprot", &["tal", "sprot"] ; "complex onset")]
     #[test_case("tʃitʃrek", &["tʃit", "ʃrek"] ; "longer consonants")]
-    #[test_case("tejis", &["tej", "is"] ; "longer vowels")]
+    #[test_case("tejis", &["tej", "jis"] ; "diphthong onset overlap")]
+    #[test_case("tejkis", &["tej", "kis"] ; "diphthong plus consonant")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let phonology: Phonology = RawPhonology {
             onset_singles: phoneme_set(["p", "t", "k", "tʃ", "s", "ʃ", "r", "l", "j"]),
