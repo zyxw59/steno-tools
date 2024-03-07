@@ -109,6 +109,7 @@ impl PartialOrd for Phoneme {
 pub struct RawPhonology {
     onset_singles: BTreeSet<Phoneme>,
     onset_clusters: Vec<OnsetCluster>,
+    consonants: BTreeSet<Phoneme>,
     vowels: BTreeSet<Phoneme>,
 }
 
@@ -161,11 +162,13 @@ impl TryFrom<RawPhonology> for Phonology {
             .map(|(first, seconds)| pattern_from_set(seconds, true).map(|pat| (first, pat)))
             .collect::<Result<_, _>>()?;
 
+        let consonants = pattern_from_set(raw.consonants, true)?;
         let vowels = pattern_from_set(raw.vowels, false)?;
 
         Ok(Phonology {
             onset_singles,
             onset_clusters,
+            consonants,
             vowels,
         })
     }
@@ -176,6 +179,7 @@ impl TryFrom<RawPhonology> for Phonology {
 pub struct Phonology {
     onset_singles: Regex,
     onset_clusters: BTreeMap<Phoneme, Regex>,
+    consonants: Regex,
     vowels: Regex,
 }
 
@@ -213,9 +217,15 @@ impl Phonology {
         // work backwards to find the maximally valid onset
         let mut onset = vowel;
         let mut regex = &self.onset_singles;
-        while let Some(following) = regex.find(&word[..onset]) {
-            onset = following.start();
-            let Some(prev_regex) = self.onset_clusters.get(following.as_str()) else {
+        while let Some(prev_in_cluster) = regex.find(&word[..onset]) {
+            if let Some(consonant) = self.consonants.find(&word[..onset]) {
+                if consonant.start() != prev_in_cluster.start() {
+                    // there was another (longer) consonant that matched here
+                    break;
+                }
+            }
+            onset = prev_in_cluster.start();
+            let Some(prev_regex) = self.onset_clusters.get(prev_in_cluster.as_str()) else {
                 break;
             };
             regex = prev_regex;
@@ -398,7 +408,7 @@ impl Theory {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::BTreeSet, fs::File, io::BufReader, rc::Rc};
+    use std::{collections::BTreeSet, fs::File, io::BufReader};
 
     use test_case::test_case;
 
@@ -410,39 +420,37 @@ mod tests {
         Ok(())
     }
 
-    fn phoneme_set<S>(it: impl IntoIterator<Item = S>) -> BTreeSet<Phoneme>
-    where
-        S: Into<Rc<str>>,
-    {
-        it.into_iter().map(|ph| Phoneme(ph.into())).collect()
+    fn phoneme_set(s: &str) -> BTreeSet<Phoneme> {
+        s.split_whitespace().map(|ph| Phoneme(ph.into())).collect()
     }
 
     #[test_case("sput", &["sput"] ; "one syllable")]
     #[test_case("epsol", &["ep", "sol"] ; "vowel initial")]
     #[test_case("talsprot", &["tal", "sprot"] ; "complex onset")]
-    #[test_case("tʃitʃrek", &["tʃit", "ʃrek"] ; "longer consonants")]
+    #[test_case("tʃitʃrek", &["tʃitʃ", "rek"] ; "longer consonants")]
     #[test_case("tejis", &["tej", "jis"] ; "diphthong onset overlap")]
     #[test_case("tejkis", &["tej", "kis"] ; "diphthong plus consonant")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let phonology: Phonology = RawPhonology {
-            onset_singles: phoneme_set(["p", "t", "k", "tʃ", "s", "ʃ", "r", "l", "j"]),
+            onset_singles: phoneme_set("p t k tʃ s ʃ r l j"),
             onset_clusters: [
                 OnsetCluster {
-                    first: phoneme_set(["p", "k"]),
-                    second: phoneme_set(["r", "l"]),
+                    first: phoneme_set("p k"),
+                    second: phoneme_set("r l"),
                 },
                 OnsetCluster {
-                    first: phoneme_set(["t", "ʃ"]),
-                    second: phoneme_set(["r"]),
+                    first: phoneme_set("t ʃ"),
+                    second: phoneme_set("r"),
                 },
                 OnsetCluster {
-                    first: phoneme_set(["s"]),
-                    second: phoneme_set(["p", "t", "k", "l"]),
+                    first: phoneme_set("s"),
+                    second: phoneme_set("p t k l"),
                 },
             ]
             .into_iter()
             .collect(),
-            vowels: phoneme_set(["a", "e", "i", "o", "u", "ej"]),
+            consonants: phoneme_set("p t k tʃ s ʃ r l j"),
+            vowels: phoneme_set("a e i o u ej"),
         }
         .try_into()?;
         let actual_syllables = phonology
