@@ -1,10 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::File,
     io::{self, BufRead, BufReader, BufWriter},
     path::PathBuf,
 };
-use serde::{Deserialize, Serialize};
 
 use clap::Parser;
 use serde_json::from_reader;
@@ -165,7 +165,9 @@ impl GenerateOutlines {
                         conflict_entry.insert(word.clone());
                     }
                 } else {
-                    generated_dict.no_outlines.push((word.clone(), pron.clone()));
+                    generated_dict
+                        .no_outlines
+                        .push((word.clone(), pron.clone()));
                 }
             }
         }

@@ -275,7 +275,12 @@ mod tests {
     #[test_case("SH", "KWR", false, true ; "overlap")]
     #[test_case("-FR", "*T", false, false ; "ignore star")]
     #[test_case("*FR", "*T", false, true ; "star conflicts")]
-    fn compare_chords(left: &str, right: &str, before: bool, conflicts: bool) -> anyhow::Result<()> {
+    fn compare_chords(
+        left: &str,
+        right: &str,
+        before: bool,
+        conflicts: bool,
+    ) -> anyhow::Result<()> {
         let left: Chord = left.parse()?;
         let right: Chord = right.parse()?;
         println!("{left:#}: {:08x}", left.bits());
