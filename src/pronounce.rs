@@ -2,6 +2,7 @@ use std::{
     cmp,
     collections::{BTreeMap, BTreeSet},
     fmt,
+    ops::Range,
     rc::Rc,
 };
 
@@ -87,6 +88,12 @@ pub struct Phoneme(Rc<str>);
 crate::fmt_impls!(Phoneme);
 crate::deref_impls!(Phoneme as str);
 
+impl<S: Into<Rc<str>>> From<S> for Phoneme {
+    fn from(s: S) -> Phoneme {
+        Phoneme(s.into())
+    }
+}
+
 /// Order phonemes first by decreasing length order, then by normal string ordering. This is so
 /// that when constructing regexes, the sorted order will produce a regex that preferentially
 /// matches longer phonemes.
@@ -111,6 +118,8 @@ pub struct RawPhonology {
     onset_clusters: Vec<OnsetCluster>,
     consonants: BTreeSet<Phoneme>,
     vowels: BTreeSet<Phoneme>,
+    primary_stress: Phoneme,
+    secondary_stress: Phoneme,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -124,7 +133,7 @@ impl TryFrom<RawPhonology> for Phonology {
 
     fn try_from(raw: RawPhonology) -> Result<Self, Self::Error> {
         fn pattern_from_set(
-            set: BTreeSet<Phoneme>,
+            set: impl IntoIterator<Item = Phoneme>,
             right_anchored: bool,
         ) -> Result<Regex, regex::Error> {
             let initial = if right_anchored {
@@ -162,6 +171,13 @@ impl TryFrom<RawPhonology> for Phonology {
             .map(|(first, seconds)| pattern_from_set(seconds, true).map(|pat| (first, pat)))
             .collect::<Result<_, _>>()?;
 
+        let stress_markers = [
+            (raw.primary_stress, Stress::Primary),
+            (raw.secondary_stress, Stress::Secondary),
+        ]
+        .into_iter()
+        .collect::<BTreeMap<_, _>>();
+        let stress_pattern = pattern_from_set(stress_markers.keys().cloned(), false)?;
         let consonants = pattern_from_set(raw.consonants, true)?;
         let vowels = pattern_from_set(raw.vowels, false)?;
 
@@ -170,6 +186,8 @@ impl TryFrom<RawPhonology> for Phonology {
             onset_clusters,
             consonants,
             vowels,
+            stress_pattern,
+            stress_markers,
         })
     }
 }
@@ -181,26 +199,36 @@ pub struct Phonology {
     onset_clusters: BTreeMap<Phoneme, Regex>,
     consonants: Regex,
     vowels: Regex,
+    stress_pattern: Regex,
+    stress_markers: BTreeMap<Phoneme, Stress>,
 }
 
 impl Phonology {
     #[allow(unused)]
-    pub fn syllabize_word<'p, 'w>(
-        &'p self,
-        word: &'w str,
-    ) -> anyhow::Result<SyllableIterator<'p, 'w>> {
-        let initial = self.syllabize_one(word, 0);
-        if initial.onset != 0 {
-            return Err(anyhow::anyhow!(
-                "failed to syllabize first {} phonemes",
-                initial.onset,
-            ));
+    pub fn syllabize_word<'p, 'w>(&'p self, word: &'w str) -> SyllableIterator<'p, 'w> {
+        let mut next_stress_marker = self.next_stress_marker(word, 0);
+        let prev_syllable = self.syllabize_one(word, 0);
+        let prev_syllable_stress;
+        let require_start;
+        if next_stress_marker.1.start == 0 {
+            prev_syllable_stress = next_stress_marker.0;
+            require_start = Some(next_stress_marker.1.end);
+            // get the *next* stress marker, since we've already passed this one by the first
+            // syllable
+            next_stress_marker = self.next_stress_marker(word, next_stress_marker.1.end);
+        } else {
+            require_start = Some(0);
+            prev_syllable_stress = Stress::None;
         }
-        Ok(SyllableIterator {
-            prev_syllable: initial,
-            word,
+
+        SyllableIterator {
             phonology: self,
-        })
+            word,
+            next_stress_marker,
+            prev_syllable,
+            prev_syllable_stress,
+            require_start,
+        }
     }
 
     fn syllabize_one(&self, word: &str, start_at: usize) -> SyllableIndices {
@@ -232,17 +260,31 @@ impl Phonology {
         }
         SyllableIndices { onset, vowel, coda }
     }
+
+    fn next_stress_marker(&self, word: &str, start_at: usize) -> (Stress, Range<usize>) {
+        if let Some(m) = self.stress_pattern.find_at(word, start_at) {
+            let stress = self
+                .stress_markers
+                .get(m.as_str())
+                .expect("unexpected stress marker match");
+            (*stress, m.range())
+        } else {
+            (Stress::None, word.len()..word.len())
+        }
+    }
 }
 
 /// Start indices of the onset, vowel, and coda of a syllable
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 struct SyllableIndices {
     onset: usize,
     vowel: usize,
     coda: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Syllable<'w> {
+    pub stress: Stress,
     pub onset: &'w str,
     pub vowel: &'w str,
     pub coda: &'w str,
@@ -257,31 +299,66 @@ impl fmt::Display for Syllable<'_> {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Stress {
+    None,
+    Secondary,
+    Primary,
+}
+
 pub struct SyllableIterator<'p, 'w> {
     phonology: &'p Phonology,
     word: &'w str,
+    next_stress_marker: (Stress, Range<usize>),
     prev_syllable: SyllableIndices,
+    prev_syllable_stress: Stress,
+    require_start: Option<usize>,
 }
 
 impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
-    type Item = Syllable<'w>;
+    type Item = anyhow::Result<Syllable<'w>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.prev_syllable.onset >= self.word.len() {
             None
         } else {
+            let mut result = Ok(());
+            if let Some(require_start) = self.require_start {
+                if self.prev_syllable.onset > require_start {
+                    result = Err(anyhow::anyhow!(
+                        "invalid onset: {:?}",
+                        &self.word[require_start..self.prev_syllable.onset]
+                    ));
+                }
+            }
+
             let next_syllable = self
                 .phonology
                 .syllabize_one(self.word, self.prev_syllable.coda);
-            // allow double-counting vowel diphthongs in the onset
-            let coda_end = self.prev_syllable.coda.max(next_syllable.onset);
+
+            let next_syllable_stress;
+            let coda_end;
+            if next_syllable.vowel >= self.next_stress_marker.1.end {
+                self.require_start = Some(self.next_stress_marker.1.end);
+                next_syllable_stress = self.next_stress_marker.0;
+                coda_end = self.next_stress_marker.1.start;
+                self.next_stress_marker = self
+                    .phonology
+                    .next_stress_marker(self.word, self.next_stress_marker.1.end);
+            } else {
+                self.require_start = None;
+                next_syllable_stress = Stress::None;
+                coda_end = self.prev_syllable.coda.max(next_syllable.onset);
+            }
             let item = Syllable {
+                stress: self.prev_syllable_stress,
                 onset: &self.word[self.prev_syllable.onset..self.prev_syllable.vowel],
                 vowel: &self.word[self.prev_syllable.vowel..self.prev_syllable.coda],
                 coda: &self.word[self.prev_syllable.coda..coda_end],
             };
             self.prev_syllable = next_syllable;
-            Some(item)
+            self.prev_syllable_stress = next_syllable_stress;
+            Some(result.map(|()| item))
         }
     }
 }
@@ -430,6 +507,10 @@ mod tests {
     #[test_case("tʃitʃrek", &["tʃitʃ", "rek"] ; "longer consonants")]
     #[test_case("tejis", &["tej", "jis"] ; "diphthong onset overlap")]
     #[test_case("tejkis", &["tej", "kis"] ; "diphthong plus consonant")]
+    #[test_case("ˈtara", &["ta", "ra"] ; "initial stress")]
+    #[test_case("ˈata", &["a", "ta"] ; "initial stress without onset")]
+    #[test_case("tasˈpal", &["tas", "pal"] ; "medial stress")]
+    #[test_case("kajˈteraˌpat", &["kaj", "te", "ra", "pat"] ; "multiple stresses")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let phonology: Phonology = RawPhonology {
             onset_singles: phoneme_set("p t k tʃ s ʃ r l j"),
@@ -451,12 +532,14 @@ mod tests {
             .collect(),
             consonants: phoneme_set("p t k tʃ s ʃ r l j"),
             vowels: phoneme_set("a e i o u ej"),
+            primary_stress: "ˈ".into(),
+            secondary_stress: "ˌ".into(),
         }
         .try_into()?;
         let actual_syllables = phonology
-            .syllabize_word(word)?
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>();
+            .syllabize_word(word)
+            .map(|res| res.map(|s| s.to_string()))
+            .collect::<Result<Vec<_>, _>>()?;
 
         assert_eq!(actual_syllables, expected_syllables);
         Ok(())
