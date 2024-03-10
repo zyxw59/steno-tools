@@ -113,6 +113,12 @@ impl PartialOrd for Phoneme {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct PhoneticTheory {
+    pub theory: Theory,
+    pub phonology: Phonology,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct RawPhonology {
     onset_singles: BTreeSet<Phoneme>,
     onset_clusters: Vec<OnsetCluster>,
@@ -489,11 +495,12 @@ mod tests {
 
     use test_case::test_case;
 
-    use super::{OnsetCluster, Phoneme, Phonology, RawPhonology, Theory};
+    use super::{OnsetCluster, Phoneme, PhoneticTheory, Phonology, RawPhonology};
 
     #[test]
     fn load_theory() -> anyhow::Result<()> {
-        let _theory: Theory = serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
+        let _theory: PhoneticTheory =
+            serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
         Ok(())
     }
 
