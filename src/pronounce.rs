@@ -207,7 +207,7 @@ impl Phonology {
     #[allow(unused)]
     pub fn syllabize_word<'p, 'w>(&'p self, word: &'w str) -> SyllableIterator<'p, 'w> {
         let mut next_stress_marker = self.next_stress_marker(word, 0);
-        let prev_syllable = self.syllabize_one(word, 0);
+        let prev_syllable = self.syllabize_one(word, 0, next_stress_marker.1.clone());
         let prev_syllable_stress;
         let require_start;
         if next_stress_marker.1.start == 0 {
@@ -231,7 +231,12 @@ impl Phonology {
         }
     }
 
-    fn syllabize_one(&self, word: &str, start_at: usize) -> SyllableIndices {
+    fn syllabize_one(
+        &self,
+        word: &str,
+        start_at: usize,
+        skip_range: Range<usize>,
+    ) -> SyllableIndices {
         // find the first vowel
         let Some(vowel_match) = self.vowels.find_at(word, start_at) else {
             return SyllableIndices {
@@ -244,6 +249,9 @@ impl Phonology {
         let coda = vowel_match.end();
         // work backwards to find the maximally valid onset
         let mut onset = vowel;
+        if onset == skip_range.end {
+            onset = skip_range.start
+        }
         let mut regex = &self.onset_singles;
         while let Some(prev_in_cluster) = regex.find(&word[..onset]) {
             if let Some(consonant) = self.consonants.find(&word[..onset]) {
@@ -256,6 +264,9 @@ impl Phonology {
             let Some(prev_regex) = self.onset_clusters.get(prev_in_cluster.as_str()) else {
                 break;
             };
+            if onset == skip_range.end {
+                onset = skip_range.start
+            }
             regex = prev_regex;
         }
         SyllableIndices { onset, vowel, coda }
@@ -332,9 +343,11 @@ impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
                 }
             }
 
-            let next_syllable = self
-                .phonology
-                .syllabize_one(self.word, self.prev_syllable.coda);
+            let next_syllable = self.phonology.syllabize_one(
+                self.word,
+                self.prev_syllable.coda,
+                self.next_stress_marker.1.clone(),
+            );
 
             let next_syllable_stress;
             let coda_end;
@@ -503,6 +516,7 @@ mod tests {
 
     #[test_case("sput", &["sput"] ; "one syllable")]
     #[test_case("epsol", &["ep", "sol"] ; "vowel initial")]
+    #[test_case("taspal", &["ta", "spal"] ; "medial cluster")]
     #[test_case("talsprot", &["tal", "sprot"] ; "complex onset")]
     #[test_case("tʃitʃrek", &["tʃitʃ", "rek"] ; "longer consonants")]
     #[test_case("tejis", &["tej", "jis"] ; "diphthong onset overlap")]
@@ -511,6 +525,7 @@ mod tests {
     #[test_case("ˈata", &["a", "ta"] ; "initial stress without onset")]
     #[test_case("tasˈpal", &["tas", "pal"] ; "medial stress")]
     #[test_case("kajˈteraˌpat", &["kaj", "te", "ra", "pat"] ; "multiple stresses")]
+    #[test_case("tejˈis", &["tej", "jˈis"] ; "diphthong onset overlap with stress")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let phonology: Phonology = RawPhonology {
             onset_singles: phoneme_set("p t k tʃ s ʃ r l j"),
