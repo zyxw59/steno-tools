@@ -61,6 +61,7 @@ theory:
     "ʃ": ["-RB"]
     "ʒ": ["-PBLG"]
     "θ": ["*T"]
+
 phonology:
   onset_singles: ["b", "d", "dʒ", "f", "g", "h", "j", "k", "l", "m", "n", "p",
     "r", "s", "t", "tʃ", "v", "w", "z", "ð", "ʃ", "ʒ", "θ"]

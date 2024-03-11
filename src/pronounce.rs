@@ -2,10 +2,12 @@ use std::{
     cmp,
     collections::{BTreeMap, BTreeSet},
     fmt,
+    io::BufRead,
     ops::Range,
     rc::Rc,
 };
 
+use itertools::Itertools;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -14,73 +16,37 @@ use crate::{
     dictionary::{Outline, Word},
 };
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Default, Debug, Clone, Deserialize)]
 pub struct Dictionary {
     entries: BTreeMap<Word, Vec<Pronunciation>>,
 }
 
 impl Dictionary {
+    pub fn load_csv(reader: impl BufRead) -> anyhow::Result<Self> {
+        let mut this = Self::default();
+        for line in reader.lines() {
+            let line = line?;
+            let Some((word, prons)) = line.split_once(',') else {
+                continue;
+            };
+            let entries = this.entries.entry(word.into()).or_default();
+            for p in prons.trim_matches('"').split(',') {
+                let pron = p.trim().trim_matches('/');
+                entries.push(pron.into());
+            }
+        }
+        Ok(this)
+    }
+
     pub fn get(&self, word: &Word) -> &[Pronunciation] {
         self.entries
-            .get(&*word.to_ascii_uppercase())
+            .get(&*word.to_ascii_lowercase())
             .map(|ps| &**ps)
             .unwrap_or(&[])
     }
 }
 
-#[derive(Debug, Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(transparent)]
-pub struct Pronunciation(Rc<[Phoneme]>);
-crate::deref_impls!(Pronunciation as [Phoneme]);
-
-impl fmt::Display for Pronunciation {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.0.join(" "), f)
-    }
-}
-
-impl<'de> Deserialize<'de> for Pronunciation {
-    fn deserialize<D>(de: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::{Error, SeqAccess};
-        struct Visitor;
-
-        impl<'de> serde::de::Visitor<'de> for Visitor {
-            type Value = Pronunciation;
-
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                f.write_str("an array of strings")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: Error,
-            {
-                Ok(Pronunciation(
-                    v.split_whitespace()
-                        .map(|segment| Phoneme(segment.into()))
-                        .collect(),
-                ))
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let size_hint = seq.size_hint().unwrap_or_default();
-                let mut vec = Vec::with_capacity(size_hint);
-                while let Some(phoneme) = seq.next_element::<Phoneme>()? {
-                    vec.push(phoneme);
-                }
-                Ok(Pronunciation(vec.into()))
-            }
-        }
-
-        de.deserialize_any(Visitor)
-    }
-}
+pub type Pronunciation = Rc<str>;
 
 #[derive(Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(transparent)]
@@ -118,6 +84,130 @@ pub struct PhoneticTheory {
     pub phonology: Phonology,
 }
 
+impl PhoneticTheory {
+    pub fn get_outline(&self, pronunciation: &str, spelling: &str) -> anyhow::Result<Outline> {
+        let mut strokes = Vec::new();
+        for syllable in self.phonology.syllabize_word(pronunciation) {
+            let syllable = syllable?;
+            let mut possible_strokes = vec![Chord::empty()];
+            let mut next_strokes = Vec::new();
+            for possible_chords in self.theory.onset_matches(syllable.onset) {
+                for st in possible_strokes.drain(..) {
+                    for &ch in possible_chords {
+                        if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                            next_strokes.push(st | ch);
+                        }
+                    }
+                }
+                std::mem::swap(&mut possible_strokes, &mut next_strokes);
+            }
+            if possible_strokes.is_empty() {
+                return Err(anyhow::anyhow!("no strokes for onset {:?}", syllable.onset));
+            }
+            for possible_chords in self.theory.vowel_matches(syllable.vowel) {
+                for st in possible_strokes.drain(..) {
+                    for &ch in possible_chords {
+                        if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                            next_strokes.push(st | ch);
+                        }
+                    }
+                }
+                std::mem::swap(&mut possible_strokes, &mut next_strokes);
+            }
+            if possible_strokes.is_empty() {
+                return Err(anyhow::anyhow!("no strokes for vowel {:?}", syllable.vowel));
+            }
+            for possible_chords in self.theory.coda_matches(syllable.coda) {
+                for st in possible_strokes.drain(..) {
+                    for &ch in possible_chords {
+                        if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                            next_strokes.push(st | ch);
+                        }
+                    }
+                }
+                std::mem::swap(&mut possible_strokes, &mut next_strokes);
+            }
+            if possible_strokes.is_empty() {
+                return Err(anyhow::anyhow!("no strokes for coda {:?}", syllable.coda));
+            }
+            let stroke = *possible_strokes.first().ok_or_else(|| {
+                anyhow::anyhow!("no valid strokes found for syllable \"{syllable:#}\"")
+            })?;
+            strokes.push(stroke);
+        }
+        Ok(strokes.into_iter().join("/").into())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct RawTheory {
+    onsets: BTreeMap<Phoneme, Vec<Chord>>,
+    vowels: BTreeMap<Phoneme, Vec<Chord>>,
+    codas: BTreeMap<Phoneme, Vec<Chord>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(try_from = "RawTheory")]
+pub struct Theory {
+    onset_pattern: Regex,
+    vowel_pattern: Regex,
+    coda_pattern: Regex,
+    raw: RawTheory,
+}
+
+impl Theory {
+    fn onset_matches<'t, 'w>(&'t self, onset: &'w str) -> MatchChordIter<'t, 'w> {
+        MatchChordIter {
+            matches: self.onset_pattern.find_iter(onset),
+            map: &self.raw.onsets,
+        }
+    }
+
+    fn vowel_matches<'t, 'w>(&'t self, vowel: &'w str) -> MatchChordIter<'t, 'w> {
+        MatchChordIter {
+            matches: self.vowel_pattern.find_iter(vowel),
+            map: &self.raw.vowels,
+        }
+    }
+
+    fn coda_matches<'t, 'w>(&'t self, coda: &'w str) -> MatchChordIter<'t, 'w> {
+        MatchChordIter {
+            matches: self.coda_pattern.find_iter(coda),
+            map: &self.raw.codas,
+        }
+    }
+}
+
+struct MatchChordIter<'t, 'w> {
+    matches: regex::Matches<'t, 'w>,
+    map: &'t BTreeMap<Phoneme, Vec<Chord>>,
+}
+
+impl<'t, 'w> Iterator for MatchChordIter<'t, 'w> {
+    type Item = &'t [Chord];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let m = self.matches.next()?;
+        Some(self.map.get(m.as_str()).map_or(&[], |v| &**v))
+    }
+}
+
+impl TryFrom<RawTheory> for Theory {
+    type Error = regex::Error;
+
+    fn try_from(raw: RawTheory) -> Result<Self, Self::Error> {
+        let onset_pattern = pattern_from_set(raw.onsets.keys().cloned(), false)?;
+        let vowel_pattern = pattern_from_set(raw.vowels.keys().cloned(), false)?;
+        let coda_pattern = pattern_from_set(raw.codas.keys().cloned(), false)?;
+        Ok(Self {
+            onset_pattern,
+            vowel_pattern,
+            coda_pattern,
+            raw,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct RawPhonology {
     onset_singles: BTreeSet<Phoneme>,
@@ -138,28 +228,6 @@ impl TryFrom<RawPhonology> for Phonology {
     type Error = regex::Error;
 
     fn try_from(raw: RawPhonology) -> Result<Self, Self::Error> {
-        fn pattern_from_set(
-            set: impl IntoIterator<Item = Phoneme>,
-            right_anchored: bool,
-        ) -> Result<Regex, regex::Error> {
-            let initial = if right_anchored {
-                "(?:".to_owned()
-            } else {
-                String::new()
-            };
-            let mut pattern = set.into_iter().fold(initial, |mut pat, phon| {
-                regex_syntax::escape_into(&phon, &mut pat);
-                pat.push('|');
-                pat
-            });
-            // remove trailing '|'
-            pattern.pop();
-            if right_anchored {
-                pattern += ")$";
-            }
-            Regex::new(&pattern)
-        }
-
         let onset_singles = pattern_from_set(raw.onset_singles, true)?;
 
         // map (second_consonant -> [first_consonants])
@@ -298,8 +366,15 @@ pub struct Syllable<'w> {
 
 impl fmt::Display for Syllable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.stress, f)?;
         f.write_str(self.onset)?;
+        if f.alternate() {
+            f.write_str(" ")?;
+        }
         f.write_str(self.vowel)?;
+        if f.alternate() {
+            f.write_str(" ")?;
+        }
         f.write_str(self.coda)?;
         Ok(())
     }
@@ -310,6 +385,16 @@ pub enum Stress {
     None,
     Secondary,
     Primary,
+}
+
+impl fmt::Display for Stress {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::None => Ok(()),
+            Self::Secondary => f.write_str("ˌ"),
+            Self::Primary => f.write_str("ˈ"),
+        }
+    }
 }
 
 pub struct SyllableIterator<'p, 'w> {
@@ -369,124 +454,26 @@ impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Theory {
-    vowels: BTreeMap<Pronunciation, Vec<Chord>>,
-    onsets: BTreeMap<Pronunciation, Vec<Chord>>,
-    codas: BTreeMap<Pronunciation, Vec<Chord>>,
-    max_onset_len: usize,
-    max_coda_len: usize,
-}
-
-impl<'de> Deserialize<'de> for Theory {
-    fn deserialize<D>(de: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        struct RawTheory {
-            vowels: BTreeMap<Pronunciation, Vec<Chord>>,
-            onsets: BTreeMap<Pronunciation, Vec<Chord>>,
-            codas: BTreeMap<Pronunciation, Vec<Chord>>,
-        }
-
-        impl From<RawTheory> for Theory {
-            fn from(theory: RawTheory) -> Self {
-                fn max_len<T>(map: &BTreeMap<Pronunciation, T>) -> usize {
-                    map.keys().map(|p| p.len()).max().unwrap_or_default()
-                }
-                let max_vowel_len = max_len(&theory.vowels);
-                let max_onset_len = max_len(&theory.onsets).max(max_vowel_len);
-                let max_coda_len = max_len(&theory.codas).max(max_vowel_len);
-                Self {
-                    vowels: theory.vowels,
-                    onsets: theory.onsets,
-                    codas: theory.codas,
-                    max_onset_len,
-                    max_coda_len,
-                }
-            }
-        }
-
-        RawTheory::deserialize(de).map(Self::from)
+fn pattern_from_set(
+    set: impl IntoIterator<Item = Phoneme>,
+    right_anchored: bool,
+) -> Result<Regex, regex::Error> {
+    let initial = if right_anchored {
+        "(?:".to_owned()
+    } else {
+        String::new()
+    };
+    let mut pattern = set.into_iter().fold(initial, |mut pat, phon| {
+        regex_syntax::escape_into(&phon, &mut pat);
+        pat.push('|');
+        pat
+    });
+    // remove trailing '|'
+    pattern.pop();
+    if right_anchored {
+        pattern += ")$";
     }
-}
-
-impl Theory {
-    pub fn get_outline(&self, pronunciation: &Pronunciation) -> Option<Outline> {
-        use std::fmt::Write;
-        enum SyllablePosition {
-            Onset,
-            Coda,
-        }
-        let mut current_chord = Chord::empty();
-        let mut syllable_position = SyllablePosition::Onset;
-        let mut outline = String::new();
-        let mut idx = 0;
-        'outer: while idx < pronunciation.len() {
-            match syllable_position {
-                SyllablePosition::Onset => {
-                    for len in (0..=self.max_onset_len).rev() {
-                        if let Some(substr) = pronunciation.get(idx..idx + len) {
-                            if let Some(chords) = self.get_onset(substr) {
-                                for &chord in chords {
-                                    if current_chord.before(chord) {
-                                        current_chord |= chord;
-                                        idx += len;
-                                        continue 'outer;
-                                    }
-                                }
-                            }
-                            if let Some(chords) = self.get_vowel(substr) {
-                                for &chord in chords {
-                                    if current_chord.before(chord) {
-                                        current_chord |= chord;
-                                        syllable_position = SyllablePosition::Coda;
-                                        idx += len;
-                                        continue 'outer;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    return None;
-                }
-                SyllablePosition::Coda => {
-                    for len in (0..=self.max_coda_len).rev() {
-                        if let Some(substr) = pronunciation.get(idx..idx + len) {
-                            if let Some(chords) = self.get_coda(substr) {
-                                for &chord in chords {
-                                    if current_chord.before(chord) {
-                                        current_chord |= chord;
-                                        idx += len;
-                                        continue 'outer;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    let _ = write!(outline, "/{current_chord}");
-                    current_chord = Chord::empty();
-                    syllable_position = SyllablePosition::Onset;
-                }
-            }
-        }
-        let _ = write!(outline, "/{current_chord}");
-
-        Some((&outline[1..]).into())
-    }
-
-    fn get_onset(&self, sounds: &[Phoneme]) -> Option<&[Chord]> {
-        self.onsets.get(sounds).map(|ch| &**ch)
-    }
-
-    fn get_vowel(&self, sounds: &[Phoneme]) -> Option<&[Chord]> {
-        self.vowels.get(sounds).map(|ch| &**ch)
-    }
-
-    fn get_coda(&self, sounds: &[Phoneme]) -> Option<&[Chord]> {
-        self.codas.get(sounds).map(|ch| &**ch)
-    }
+    Regex::new(&pattern)
 }
 
 #[cfg(test)]
