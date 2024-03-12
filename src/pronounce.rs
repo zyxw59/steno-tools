@@ -137,7 +137,7 @@ impl PhoneticTheory {
             let syllable = syllable?;
             let mut possible_strokes = vec![Chord::empty()];
             let mut next_strokes = Vec::new();
-            for possible_chords in self.theory.onset_matches(syllable.onset) {
+            for possible_chords in self.theory.onset_matches(syllable.onset()) {
                 for st in possible_strokes.drain(..) {
                     for &ch in possible_chords {
                         if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -148,9 +148,9 @@ impl PhoneticTheory {
                 std::mem::swap(&mut possible_strokes, &mut next_strokes);
             }
             if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!("no strokes for onset {:?}", syllable.onset));
+                return Err(anyhow::anyhow!("no strokes for onset {:?}", syllable.onset()));
             }
-            for possible_chords in self.theory.vowel_matches(syllable.vowel) {
+            for possible_chords in self.theory.vowel_matches(syllable.vowel()) {
                 for st in possible_strokes.drain(..) {
                     for &ch in possible_chords {
                         if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -161,9 +161,9 @@ impl PhoneticTheory {
                 std::mem::swap(&mut possible_strokes, &mut next_strokes);
             }
             if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!("no strokes for vowel {:?}", syllable.vowel));
+                return Err(anyhow::anyhow!("no strokes for vowel {:?}", syllable.vowel()));
             }
-            for possible_chords in self.theory.coda_matches(syllable.coda) {
+            for possible_chords in self.theory.coda_matches(syllable.coda()) {
                 for st in possible_strokes.drain(..) {
                     for &ch in possible_chords {
                         if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -174,7 +174,7 @@ impl PhoneticTheory {
                 std::mem::swap(&mut possible_strokes, &mut next_strokes);
             }
             if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!("no strokes for coda {:?}", syllable.coda));
+                return Err(anyhow::anyhow!("no strokes for coda {:?}", syllable.coda()));
             }
             let stroke = *possible_strokes.first().ok_or_else(|| {
                 anyhow::anyhow!("no valid strokes found for syllable \"{syllable:#}\"")
@@ -333,15 +333,15 @@ impl Phonology {
         let mut next_stress_marker = self.next_stress_marker(word, 0);
         let prev_syllable = self.syllabize_one(word, 0);
         let prev_syllable_stress;
-        let require_start;
+        let prev_stress_marker;
         if next_stress_marker.1.start == 0 {
             prev_syllable_stress = next_stress_marker.0;
-            require_start = Some(next_stress_marker.1.end);
+            prev_stress_marker = Some(next_stress_marker.1.clone());
             // get the *next* stress marker, since we've already passed this one by the first
             // syllable
             next_stress_marker = self.next_stress_marker(word, next_stress_marker.1.end);
         } else {
-            require_start = Some(0);
+            prev_stress_marker = Some(0..0);
             prev_syllable_stress = Stress::None;
         }
 
@@ -351,7 +351,7 @@ impl Phonology {
             next_stress_marker,
             prev_syllable,
             prev_syllable_stress,
-            require_start,
+            prev_stress_marker,
         }
     }
 
@@ -412,23 +412,43 @@ struct SyllableIndices {
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Syllable<'w> {
     pub stress: Stress,
-    pub onset: &'w str,
-    pub vowel: &'w str,
-    pub coda: &'w str,
+    word: &'w str,
+    start: usize,
+    indices: SyllableIndices,
+    end: usize,
+}
+
+impl<'w> Syllable<'w> {
+    pub fn onset(&self) -> &'w str {
+        &self.word[self.indices.onset..self.indices.vowel]
+    }
+
+    pub fn vowel(&self) -> &'w str {
+        &self.word[self.indices.vowel..self.indices.coda]
+    }
+
+    pub fn coda(&self) -> &'w str {
+        &self.word[self.indices.coda..self.end]
+    }
+
+    pub fn as_str(&self) -> &'w str {
+        &self.word[self.start..self.end]
+    }
 }
 
 impl fmt::Display for Syllable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(&self.stress, f)?;
-        f.write_str(self.onset)?;
         if f.alternate() {
+            f.write_str(&self.word[self.start..self.indices.onset])?;
             f.write_str(" ")?;
-        }
-        f.write_str(self.vowel)?;
-        if f.alternate() {
+            f.write_str(self.onset())?;
             f.write_str(" ")?;
+            f.write_str(self.vowel())?;
+            f.write_str(" ")?;
+            f.write_str(self.coda())?;
+        } else {
+            f.write_str(self.as_str())?;
         }
-        f.write_str(self.coda)?;
         Ok(())
     }
 }
@@ -456,7 +476,7 @@ pub struct SyllableIterator<'p, 'w> {
     next_stress_marker: (Stress, Range<usize>),
     prev_syllable: SyllableIndices,
     prev_syllable_stress: Stress,
-    require_start: Option<usize>,
+    prev_stress_marker: Option<Range<usize>>,
 }
 
 impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
@@ -467,13 +487,17 @@ impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
             None
         } else {
             let mut result = Ok(());
-            if let Some(require_start) = self.require_start {
-                if self.prev_syllable.onset > require_start {
+            let start;
+            if let Some(prev_stress_marker) = self.prev_stress_marker.take() {
+                start = prev_stress_marker.start;
+                if self.prev_syllable.onset > prev_stress_marker.end {
                     result = Err(anyhow::anyhow!(
                         "invalid onset: {:?}",
-                        &self.word[require_start..self.prev_syllable.onset]
+                        &self.word[prev_stress_marker.end..self.prev_syllable.onset]
                     ));
                 }
+            } else {
+                start = self.prev_syllable.onset;
             }
 
             let next_syllable = self
@@ -483,22 +507,23 @@ impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
             let next_syllable_stress;
             let coda_end;
             if next_syllable.vowel >= self.next_stress_marker.1.end {
-                self.require_start = Some(self.next_stress_marker.1.end);
+                self.prev_stress_marker = Some(self.next_stress_marker.1.clone());
                 next_syllable_stress = self.next_stress_marker.0;
                 coda_end = self.next_stress_marker.1.start;
                 self.next_stress_marker = self
                     .phonology
                     .next_stress_marker(self.word, self.next_stress_marker.1.end);
             } else {
-                self.require_start = None;
+                self.prev_stress_marker = None;
                 next_syllable_stress = Stress::None;
                 coda_end = self.prev_syllable.coda.max(next_syllable.onset);
             }
             let item = Syllable {
                 stress: self.prev_syllable_stress,
-                onset: &self.word[self.prev_syllable.onset..self.prev_syllable.vowel],
-                vowel: &self.word[self.prev_syllable.vowel..self.prev_syllable.coda],
-                coda: &self.word[self.prev_syllable.coda..coda_end],
+                word: self.word,
+                start,
+                indices: self.prev_syllable,
+                end: coda_end,
             };
             self.prev_syllable = next_syllable;
             self.prev_syllable_stress = next_syllable_stress;
