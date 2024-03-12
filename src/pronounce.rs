@@ -493,7 +493,7 @@ impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
                 if self.prev_syllable.onset > prev_stress_marker.end {
                     result = Err(anyhow::anyhow!(
                         "invalid onset: {:?}",
-                        &self.word[prev_stress_marker.end..self.prev_syllable.onset]
+                        &self.word[prev_stress_marker.end..self.prev_syllable.vowel]
                     ));
                 }
             } else {
