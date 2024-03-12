@@ -62,26 +62,63 @@ impl<S: Into<Rc<str>>> From<S> for Phoneme {
 }
 
 impl ops::Deref for Phoneme {
+    type Target = PhonemeRef;
+
+    fn deref(&self) -> &Self::Target {
+        PhonemeRef::new(&self.0)
+    }
+}
+
+impl Borrow<PhonemeRef> for Phoneme {
+    fn borrow(&self) -> &PhonemeRef {
+        self
+    }
+}
+
+impl Ord for Phoneme {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        PhonemeRef::cmp(self, other)
+    }
+}
+
+impl PartialOrd for Phoneme {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Hash, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct PhonemeRef(str);
+
+impl PhonemeRef {
+    pub fn new(s: &str) -> &Self {
+        unsafe { &*(s as *const str as *const Self) }
+    }
+}
+
+impl ops::Deref for PhonemeRef {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
-        &*self.0
+        &self.0
     }
 }
 
 /// Order phonemes first by decreasing length order, then by normal string ordering. This is so
 /// that when constructing regexes, the sorted order will produce a regex that preferentially
 /// matches longer phonemes.
-impl Ord for Phoneme {
+impl Ord for PhonemeRef {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.len()
-            .cmp(&other.len())
+        self.0
+            .len()
+            .cmp(&other.0.len())
             .reverse()
             .then_with(|| self.0.cmp(&other.0))
     }
 }
 
-impl PartialOrd for Phoneme {
+impl PartialOrd for PhonemeRef {
     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
         Some(self.cmp(other))
     }
@@ -197,7 +234,11 @@ impl<'t, 'w> Iterator for MatchChordIter<'t, 'w> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let m = self.matches.next()?;
-        Some(self.map.get(m.as_str()).map_or(&[], |v| &**v))
+        Some(
+            self.map
+                .get(PhonemeRef::new(m.as_str()))
+                .map_or(&[], |v| &**v),
+        )
     }
 }
 
@@ -336,7 +377,10 @@ impl Phonology {
                 }
             }
             onset = prev_in_cluster.start();
-            let Some(prev_regex) = self.onset_clusters.get(prev_in_cluster.as_str()) else {
+            let Some(prev_regex) = self
+                .onset_clusters
+                .get(PhonemeRef::new(prev_in_cluster.as_str()))
+            else {
                 break;
             };
             regex = prev_regex;
@@ -348,7 +392,7 @@ impl Phonology {
         if let Some(m) = self.stress_pattern.find_at(word, start_at) {
             let stress = self
                 .stress_markers
-                .get(m.as_str())
+                .get(PhonemeRef::new(m.as_str()))
                 .expect("unexpected stress marker match");
             (*stress, m.range())
         } else {
