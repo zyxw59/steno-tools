@@ -554,10 +554,10 @@ mod tests {
     #[test_case("tʃitʃrek", &["tʃitʃ", "rek"] ; "longer consonants")]
     #[test_case("tejis", &["tej", "jis"] ; "diphthong onset overlap")]
     #[test_case("tejkis", &["tej", "kis"] ; "diphthong plus consonant")]
-    #[test_case("ˈtara", &["ta", "ra"] ; "initial stress")]
-    #[test_case("ˈata", &["a", "ta"] ; "initial stress without onset")]
-    #[test_case("tasˈpal", &["tas", "pal"] ; "medial stress")]
-    #[test_case("kajˈteraˌpat", &["kaj", "te", "ra", "pat"] ; "multiple stresses")]
+    #[test_case("ˈtara", &["ˈta", "ra"] ; "initial stress")]
+    #[test_case("ˈata", &["ˈa", "ta"] ; "initial stress without onset")]
+    #[test_case("tasˈpal", &["tas", "ˈpal"] ; "medial stress")]
+    #[test_case("kajˈteraˌpat", &["kaj", "ˈte", "ra", "ˌpat"] ; "multiple stresses")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let phonology: Phonology = RawPhonology {
             onset_singles: phoneme_set("p t k tʃ s ʃ r l j"),
