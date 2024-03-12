@@ -61,6 +61,15 @@ theory:
     "ʃ": ["-RB"]
     "ʒ": ["-PBLG"]
     "θ": ["*T"]
+    "rtʃ": ["-FRPB"]
+    "ntʃ": ["-FRPB"]
+    "ndʒ": ["-FPBG"]
+    "ltʃ": ["-LG"]
+    "ldʒ": ["-LG"]
+    "rv": ["-FRB"]
+    "st": ["-FT", "*S"]
+    "ŋk": ["-PBG"]
+    "mp": ["*PL"]
 
 phonology:
   onset_singles: ["b", "d", "dʒ", "f", "g", "h", "j", "k", "l", "m", "n", "p",
@@ -89,6 +98,6 @@ phonology:
   consonants: ["b", "d", "dʒ", "f", "g", "h", "j", "k", "l", "m", "n", "p",
     "r", "s", "t", "tʃ", "v", "w", "z", "ð", "ŋ", "ʃ", "ʒ", "θ"]
   vowels: ["ə", "i", "e", "æ", "a", "o", "u", "ij", "ej", "aj", "oj", "æw",
-    "ow", "uw"]
+    "ow", "uw", "jə", "juw"]
   primary_stress: "ˈ"
   secondary_stress: "ˌ"
