@@ -1,8 +1,10 @@
 use std::{
+    borrow::Borrow,
     cmp,
     collections::{BTreeMap, BTreeSet},
     fmt,
     io::BufRead,
+    ops,
     ops::Range,
     rc::Rc,
 };
@@ -52,11 +54,18 @@ pub type Pronunciation = Rc<str>;
 #[serde(transparent)]
 pub struct Phoneme(Rc<str>);
 crate::fmt_impls!(Phoneme);
-crate::deref_impls!(Phoneme as str);
 
 impl<S: Into<Rc<str>>> From<S> for Phoneme {
     fn from(s: S) -> Phoneme {
         Phoneme(s.into())
+    }
+}
+
+impl ops::Deref for Phoneme {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
     }
 }
 
@@ -536,6 +545,19 @@ mod tests {
             .collect::<Result<Vec<_>, _>>()?;
 
         assert_eq!(actual_syllables, expected_syllables);
+        Ok(())
+    }
+
+    #[test_case("a", "ˈej", "AEU" ; "a")]
+    fn word_to_outline(
+        spelling: &str,
+        pronunciation: &str,
+        expected_outline: &str,
+    ) -> anyhow::Result<()> {
+        let theory: PhoneticTheory =
+            serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
+        let actual_outline = theory.get_outline(pronunciation, spelling)?;
+        assert_eq!(&*actual_outline, expected_outline);
         Ok(())
     }
 }
