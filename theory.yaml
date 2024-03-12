@@ -15,6 +15,7 @@ theory:
     "ow": ["OE"]
     "uw": ["AO"]
     "juw": ["AOU"]
+    "ju": ["AOU"]
     "jə": ["AOU"]
   onsets:
     "b": ["PW"]
@@ -56,7 +57,7 @@ theory:
     "t": ["-T"]
     "tʃ": ["-FP"]
     "v": ["-F"]
-    "z": ["-Z"]
+    "z": ["-Z", "-F"]
     "ð": ["*T"]
     "ʃ": ["-RB"]
     "ʒ": ["-PBLG"]
@@ -66,6 +67,8 @@ theory:
     "ndʒ": ["-FPBG"]
     "ltʃ": ["-LG"]
     "ldʒ": ["-LG"]
+    "lf": ["-FL"]
+    "lv": ["-FL"]
     "rv": ["-FRB"]
     "st": ["-FT", "*S"]
     "ŋk": ["-PBG"]
@@ -87,17 +90,12 @@ phonology:
       second: ["r"]
     - first: ["s", "θ", "h", "v"]
       second: ["w"]
-    # Allow consonants other than 'r' and 'w' followed by 'j' (which should
-    # be followed by some form of 'u').
-    - first: ["b", "d", "f", "h", "k", "m", "n", "p", "s", "t", "v", "z",
-      "ð", "g", "l", "ʃ", "ʒ", "θ", "tʃ", "dʒ"]
-      second: ["j"]
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["s"]
       second: ["p", "t", "k", "m", "n", "f", "θ"]
   consonants: ["b", "d", "dʒ", "f", "g", "h", "j", "k", "l", "m", "n", "p",
     "r", "s", "t", "tʃ", "v", "w", "z", "ð", "ŋ", "ʃ", "ʒ", "θ"]
   vowels: ["ə", "i", "e", "æ", "a", "o", "u", "ij", "ej", "aj", "oj", "æw",
-    "ow", "uw", "jə", "juw"]
+    "ow", "uw", "jə", "juw", "ju"]
   primary_stress: "ˈ"
   secondary_stress: "ˌ"

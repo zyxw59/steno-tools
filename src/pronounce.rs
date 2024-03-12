@@ -618,6 +618,7 @@ mod tests {
     }
 
     #[test_case("a", "ˈej", "AEU" ; "a")]
+    #[test_case("all", "ˈol", "AUL" ; "all")]
     fn word_to_outline(
         spelling: &str,
         pronunciation: &str,
