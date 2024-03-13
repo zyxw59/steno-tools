@@ -150,7 +150,7 @@ impl PhoneticTheory {
             if possible_strokes.is_empty() {
                 return Err(anyhow::anyhow!("no strokes for onset {:?}", syllable.onset()));
             }
-            for possible_chords in self.theory.rhyme_matches(syllable.rhyme()) {
+            for possible_chords in self.theory.vowel_matches(syllable.vowel()) {
                 for st in possible_strokes.drain(..) {
                     for &ch in possible_chords {
                         if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -161,7 +161,20 @@ impl PhoneticTheory {
                 std::mem::swap(&mut possible_strokes, &mut next_strokes);
             }
             if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!("no strokes for rhyme {:?}", syllable.rhyme()));
+                return Err(anyhow::anyhow!("no strokes for vowel {:?}", syllable.vowel()));
+            }
+            for possible_chords in self.theory.coda_matches(syllable.coda()) {
+                for st in possible_strokes.drain(..) {
+                    for &ch in possible_chords {
+                        if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                            next_strokes.push(st | ch);
+                        }
+                    }
+                }
+                std::mem::swap(&mut possible_strokes, &mut next_strokes);
+            }
+            if possible_strokes.is_empty() {
+                return Err(anyhow::anyhow!("no strokes for coda {:?}", syllable.coda()));
             }
             let stroke = *possible_strokes.first().ok_or_else(|| {
                 anyhow::anyhow!("no valid strokes found for syllable \"{syllable:#}\"")
@@ -175,15 +188,16 @@ impl PhoneticTheory {
 #[derive(Debug, Clone, Deserialize)]
 pub struct RawTheory {
     onsets: BTreeMap<Phoneme, Vec<Chord>>,
-    /// Rhymes match on the combination of vowel+coda
-    rhymes: BTreeMap<Phoneme, Vec<Chord>>,
+    vowels: BTreeMap<Phoneme, Vec<Chord>>,
+    codas: BTreeMap<Phoneme, Vec<Chord>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(try_from = "RawTheory")]
 pub struct Theory {
     onset_pattern: Regex,
-    rhyme_pattern: Regex,
+    vowel_pattern: Regex,
+    coda_pattern: Regex,
     raw: RawTheory,
 }
 
@@ -195,13 +209,19 @@ impl Theory {
         }
     }
 
-    fn rhyme_matches<'t, 'w>(&'t self, rhyme: &'w str) -> MatchChordIter<'t, 'w> {
+    fn vowel_matches<'t, 'w>(&'t self, vowel: &'w str) -> MatchChordIter<'t, 'w> {
         MatchChordIter {
-            matches: self.rhyme_pattern.find_iter(rhyme),
-            map: &self.raw.rhymes,
+            matches: self.vowel_pattern.find_iter(vowel),
+            map: &self.raw.vowels,
         }
     }
 
+    fn coda_matches<'t, 'w>(&'t self, coda: &'w str) -> MatchChordIter<'t, 'w> {
+        MatchChordIter {
+            matches: self.coda_pattern.find_iter(coda),
+            map: &self.raw.codas,
+        }
+    }
 }
 
 struct MatchChordIter<'t, 'w> {
@@ -227,10 +247,12 @@ impl TryFrom<RawTheory> for Theory {
 
     fn try_from(raw: RawTheory) -> Result<Self, Self::Error> {
         let onset_pattern = pattern_from_set(raw.onsets.keys().cloned(), false)?;
-        let rhyme_pattern = pattern_from_set(raw.rhymes.keys().cloned(), false)?;
+        let vowel_pattern = pattern_from_set(raw.vowels.keys().cloned(), false)?;
+        let coda_pattern = pattern_from_set(raw.codas.keys().cloned(), false)?;
         Ok(Self {
             onset_pattern,
-            rhyme_pattern,
+            vowel_pattern,
+            coda_pattern,
             raw,
         })
     }
@@ -407,10 +429,6 @@ impl<'w> Syllable<'w> {
 
     pub fn coda(&self) -> &'w str {
         &self.word[self.indices.coda..self.end]
-    }
-
-    pub fn rhyme(&self) -> &'w str {
-        &self.word[self.indices.vowel..self.end]
     }
 
     pub fn as_str(&self) -> &'w str {
