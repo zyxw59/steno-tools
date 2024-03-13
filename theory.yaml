@@ -73,6 +73,9 @@ theory:
     "st": ["-FT", "*S"]
     "ŋk": ["-PBG"]
     "mp": ["*PL"]
+    "lm": ["-PBL"]
+    "lp": ["-BL"]
+    "lb": ["-BL"]
 
 phonology:
   onset_singles: ["b", "d", "dʒ", "f", "g", "h", "j", "k", "l", "m", "n", "p",
