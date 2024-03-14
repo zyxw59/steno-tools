@@ -137,7 +137,7 @@ pub struct PhoneticTheory {
 }
 
 impl PhoneticTheory {
-    pub fn get_outline(&self, pronunciation: &str, spelling: &str) -> anyhow::Result<Outline> {
+    pub fn get_outline(&self, pronunciation: &str, _spelling: &str) -> anyhow::Result<Outline> {
         let mut strokes = Vec::new();
         for syllable in self.phonology.syllabize_word(pronunciation) {
             let syllable = syllable?;
