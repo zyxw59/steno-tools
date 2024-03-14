@@ -5,14 +5,20 @@ theory:
     "e": ["E"]
     "æ": ["A"]
     "a": ["A"]
-    "o": ["O"]
+    "o":
+      - next: "l"
+        chords: ["AU"]
+      - chords: ["O"]
     "u": ["AO"]
     "ij": ["AOE"]
     "ej": ["AEU"]
     "aj": ["AOEU"]
     "oj": ["OEU"]
     "æw": ["OU"]
-    "ow": ["OE"]
+    "ow":
+      - next: "l"
+        chords: ["O"]
+      - chords: ["OE"]
     "uw": ["AO"]
     "juw": ["AOU"]
     "ju": ["AOU"]

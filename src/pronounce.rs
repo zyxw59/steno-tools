@@ -55,6 +55,12 @@ pub type Pronunciation = Rc<str>;
 pub struct Phoneme(Rc<str>);
 crate::fmt_impls!(Phoneme);
 
+impl Phoneme {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 impl<S: Into<Rc<str>>> From<S> for Phoneme {
     fn from(s: S) -> Phoneme {
         Phoneme(s.into())
@@ -137,7 +143,7 @@ impl PhoneticTheory {
             let syllable = syllable?;
             let mut possible_strokes = vec![Chord::empty()];
             let mut next_strokes = Vec::new();
-            for possible_chords in self.theory.onset_matches(syllable.onset()) {
+            for possible_chords in self.theory.onset_matches(syllable) {
                 for st in possible_strokes.drain(..) {
                     for &ch in possible_chords {
                         if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -148,9 +154,12 @@ impl PhoneticTheory {
                 std::mem::swap(&mut possible_strokes, &mut next_strokes);
             }
             if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!("no strokes for onset {:?}", syllable.onset()));
+                return Err(anyhow::anyhow!(
+                    "no strokes for onset {:?}",
+                    syllable.onset()
+                ));
             }
-            for possible_chords in self.theory.vowel_matches(syllable.vowel()) {
+            for possible_chords in self.theory.vowel_matches(syllable) {
                 for st in possible_strokes.drain(..) {
                     for &ch in possible_chords {
                         if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -161,9 +170,12 @@ impl PhoneticTheory {
                 std::mem::swap(&mut possible_strokes, &mut next_strokes);
             }
             if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!("no strokes for vowel {:?}", syllable.vowel()));
+                return Err(anyhow::anyhow!(
+                    "no strokes for vowel {:?}",
+                    syllable.vowel()
+                ));
             }
-            for possible_chords in self.theory.coda_matches(syllable.coda()) {
+            for possible_chords in self.theory.coda_matches(syllable) {
                 for st in possible_strokes.drain(..) {
                     for &ch in possible_chords {
                         if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -187,9 +199,37 @@ impl PhoneticTheory {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RawTheory {
-    onsets: BTreeMap<Phoneme, Vec<Chord>>,
-    vowels: BTreeMap<Phoneme, Vec<Chord>>,
-    codas: BTreeMap<Phoneme, Vec<Chord>>,
+    onsets: BTreeMap<Phoneme, OutputRules>,
+    vowels: BTreeMap<Phoneme, OutputRules>,
+    codas: BTreeMap<Phoneme, OutputRules>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+enum OutputRules {
+    Simple(Rc<[Chord]>),
+    Complex(Rc<[OutputRule]>),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct OutputRule {
+    prev: Option<Phoneme>,
+    next: Option<Phoneme>,
+    chords: Rc<[Chord]>,
+}
+
+impl OutputRule {
+    fn matches_at(&self, syllable: Syllable<'_>, at: Range<usize>) -> bool {
+        self.prev
+            .as_ref()
+            .map(|ph| syllable.until_index(at.start).ends_with(ph.as_str()))
+            .unwrap_or(true)
+            && self
+                .next
+                .as_ref()
+                .map(|ph| syllable.after_index(at.end).starts_with(ph.as_str()))
+                .unwrap_or(true)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -202,31 +242,39 @@ pub struct Theory {
 }
 
 impl Theory {
-    fn onset_matches<'t, 'w>(&'t self, onset: &'w str) -> MatchChordIter<'t, 'w> {
+    fn onset_matches<'t, 'w>(&'t self, syllable: Syllable<'w>) -> MatchChordIter<'t, 'w> {
         MatchChordIter {
-            matches: self.onset_pattern.find_iter(onset),
+            matches: self.onset_pattern.find_iter(syllable.onset()),
+            segment_start: syllable.indices.onset,
             map: &self.raw.onsets,
+            syllable,
         }
     }
 
-    fn vowel_matches<'t, 'w>(&'t self, vowel: &'w str) -> MatchChordIter<'t, 'w> {
+    fn vowel_matches<'t, 'w>(&'t self, syllable: Syllable<'w>) -> MatchChordIter<'t, 'w> {
         MatchChordIter {
-            matches: self.vowel_pattern.find_iter(vowel),
+            matches: self.vowel_pattern.find_iter(syllable.vowel()),
+            segment_start: syllable.indices.vowel,
             map: &self.raw.vowels,
+            syllable,
         }
     }
 
-    fn coda_matches<'t, 'w>(&'t self, coda: &'w str) -> MatchChordIter<'t, 'w> {
+    fn coda_matches<'t, 'w>(&'t self, syllable: Syllable<'w>) -> MatchChordIter<'t, 'w> {
         MatchChordIter {
-            matches: self.coda_pattern.find_iter(coda),
+            matches: self.coda_pattern.find_iter(syllable.coda()),
+            segment_start: syllable.indices.coda,
             map: &self.raw.codas,
+            syllable,
         }
     }
 }
 
 struct MatchChordIter<'t, 'w> {
     matches: regex::Matches<'t, 'w>,
-    map: &'t BTreeMap<Phoneme, Vec<Chord>>,
+    map: &'t BTreeMap<Phoneme, OutputRules>,
+    syllable: Syllable<'w>,
+    segment_start: usize,
 }
 
 impl<'t, 'w> Iterator for MatchChordIter<'t, 'w> {
@@ -234,11 +282,19 @@ impl<'t, 'w> Iterator for MatchChordIter<'t, 'w> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let m = self.matches.next()?;
-        Some(
-            self.map
-                .get(PhonemeRef::new(m.as_str()))
-                .map_or(&[], |v| &**v),
-        )
+        Some(match self.map.get(PhonemeRef::new(m.as_str())) {
+            Some(OutputRules::Simple(outputs)) => outputs,
+            Some(OutputRules::Complex(rules)) => {
+                // match range is relative to the start of the segment (onset/vowel/coda), so we
+                // need to increment it here to get the true indices.
+                let range = (m.start() + self.segment_start)..(m.end() + self.segment_start);
+                rules
+                    .iter()
+                    .find(|rule| rule.matches_at(self.syllable, range.clone()))
+                    .map_or(&[], |rule| &*rule.chords)
+            }
+            None => &[],
+        })
     }
 }
 
@@ -433,6 +489,16 @@ impl<'w> Syllable<'w> {
 
     pub fn as_str(&self) -> &'w str {
         &self.word[self.start..self.end]
+    }
+
+    /// Returns the part of the syllable up to the specified index into the word.
+    fn until_index(&self, index: usize) -> &'w str {
+        &self.word[self.start..index]
+    }
+
+    /// Returns the part of the syllable after the specified index into the word.
+    fn after_index(&self, index: usize) -> &'w str {
+        &self.word[index..self.end]
     }
 }
 
