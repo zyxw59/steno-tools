@@ -1,6 +1,9 @@
 theory:
   vowels:
-    "AH": ["U"]
+    "AH":
+      - prev: "Y"
+        chords: ["AOU"]
+      - chords: ["U"]
     "AA":
       - next: "L"
         chords: ["AU"]
@@ -14,7 +17,14 @@ theory:
     "AE": ["A"]
     "IH": ["EU"]
     "EH": ["E"]
-    "UH": ["AO"]
+    "ER":
+      - prev: "Y"
+        chords: ["AOUR"]
+      - chords: ["UR"]
+    "UH":
+      - prev: "Y"
+        chords: ["AOU"]
+      - chords: ["AO"]
     "IY": ["AOE"]
     "EY": ["AEU"]
     "AY": ["AOEU"]
@@ -24,10 +34,10 @@ theory:
       - next: "L"
         chords: ["O"]
       - chords: ["OE"]
-    "UW": ["AO"]
-    "Y UW": ["AOU"]
-    "Y UH": ["AOU"]
-    "Y AH": ["AOU"]
+    "UW":
+      - prev: "Y"
+        chords: ["AOU"]
+      - chords: ["AO"]
 
   onsets:
     "B": ["PW"]
@@ -50,9 +60,19 @@ theory:
     "TH": ["TH"]
     "V": ["SPW"]
     "W": ["W"]
-    "Y": ["KWR"]
+    "Y":
+      - next: "AH"
+        chords: [""]
+      - next: "ER"
+        chords: [""]
+      - next: "UH"
+        chords: [""]
+      - next: "UW"
+        chords: [""]
+      - chords: ["KWR"]
     "Z": ["STK"]
     "ZH": ["SKH"]
+    "HH W": ["WH"]
   codas:
     "B": ["-B"]
     "D": ["-D"]
@@ -83,7 +103,10 @@ theory:
     "L V": ["-FL"]
     "R V": ["-FRB"]
     "S T": ["-FT", "*S"]
+    "NG": ["-PBG"]
+    "N K": ["-PBG"]
     "NG K": ["-PBG"]
+    "NG G": ["-PBG"]
     "M P": ["*PL"]
     "L M": ["-PBL"]
     "L P": ["-BL"]
@@ -98,15 +121,19 @@ phonology:
       second: ["L"]
     - first: ["P", "B", "T", "D", "K", "G"]
       second: ["R", "W"]
-    # Allow voicless fricative or 'v' plus approximant other than 'j'.
-    - first: ["F", "S", "TH", "SH"]
+    # Allow voicless fricative, 'z', or 'v' plus approximant other than 'j'.
+    - first: ["F", "S", "Z", "TH", "SH"]
       second: ["L"]
     - first: ["F", "TH", "SH", "V"]
       second: ["r"]
-    - first: ["S", "TH", "HH", "V"]
+    - first: ["S", "Z", "TH", "HH", "V"]
       second: ["W"]
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["S"]
       second: ["P", "T", "K", "M", "N", "F", "TH"]
+    # Allow any consonant other than 'r' or 'w' followed by 'j'
+    - first: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
+      "S", "T", "CH", "V", "Z", "DH", "SH", "ZH", "TH"]
+      second: ["Y"]
   vowels: ["AH", "AA", "AO", "AE", "IH", "EH", "UH", "IY", "EY", "AY", "OY",
-    "AW", "OW", "UW"]
+    "AW", "OW", "UW", "ER"]
