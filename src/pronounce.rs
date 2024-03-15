@@ -3,10 +3,11 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
     io::BufRead,
-    ops::Range,
+    ops::{Deref, Range},
     rc::Rc,
 };
 
+use anyhow::Context;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
@@ -23,19 +24,25 @@ pub struct Dictionary {
 
 impl Dictionary {
     pub fn load_csv(reader: impl BufRead) -> anyhow::Result<Self> {
+        let word_variant_pattern = regex::Regex::new(r"\([0-9]+\)$")?;
         let mut this = Self::default();
-        // TODO
-        // for line in reader.lines() {
-        //     let line = line?;
-        //     let Some((word, prons)) = line.split_once(',') else {
-        //         continue;
-        //     };
-        //     let entries = this.entries.entry(word.into()).or_default();
-        //     for p in prons.trim_matches('"').split(',') {
-        //         let pron = p.trim().trim_matches('/');
-        //         entries.push(pron.into());
-        //     }
-        // }
+        for (idx, line) in reader.lines().enumerate() {
+            let line = line.with_context(|| {
+                format!("reading line {} from pronunciation dictionary", idx + 1)
+            })?;
+            // comments
+            if line.starts_with(";;;") {
+                continue;
+            }
+            let Some((word, prons)) = line.split_once("  ") else {
+                eprintln!("line did not contain a pronunciation: {line}");
+                continue;
+            };
+            let mut word = word_variant_pattern.replace(word, "");
+            word.to_mut().make_ascii_lowercase();
+            let entries = this.entries.entry(word.into()).or_default();
+            entries.push(prons.into());
+        }
         Ok(this)
     }
 
@@ -47,10 +54,19 @@ impl Dictionary {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
 #[serde(from = "SerdePronunciation")]
 pub struct Pronunciation(Rc<[Phoneme]>);
 crate::deref_impls!(Pronunciation as [Phoneme]);
+
+impl Serialize for Pronunciation {
+    fn serialize<S>(&self, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_string().serialize(ser)
+    }
+}
 
 #[derive(Deserialize)]
 #[serde(untagged)]
@@ -71,6 +87,40 @@ impl From<SerdePronunciation> for Pronunciation {
             SerdePronunciation::String(s) => s.as_str().into(),
             SerdePronunciation::List(l) => Self(l),
         }
+    }
+}
+
+impl fmt::Display for Pronunciation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&PronunciationSlice(&self.0), f)
+    }
+}
+
+impl fmt::Debug for Pronunciation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&PronunciationSlice(&self.0), f)
+    }
+}
+
+pub struct PronunciationSlice<'w>(pub &'w [Phoneme]);
+crate::deref_impls!(PronunciationSlice<'_> as [Phoneme]);
+
+impl fmt::Display for PronunciationSlice<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some((first, rest)) = self.0.split_first() {
+            f.write_str(first)?;
+            for ph in rest {
+                f.write_str(" ")?;
+                f.write_str(ph)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for PronunciationSlice<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, f)
     }
 }
 
@@ -119,6 +169,14 @@ impl<S: AsRef<str>> From<S> for Phoneme {
     }
 }
 
+impl Deref for Phoneme {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct PhoneticTheory {
     pub theory: Theory,
@@ -147,8 +205,8 @@ impl PhoneticTheory {
             }
             if possible_strokes.is_empty() {
                 return Err(anyhow::anyhow!(
-                    "no strokes for onset {:?}",
-                    syllable.onset()
+                    "no strokes for onset {}",
+                    PronunciationSlice(syllable.onset())
                 ));
             }
             for possible_chords in self.theory.vowel_matches(syllable) {
@@ -163,8 +221,8 @@ impl PhoneticTheory {
             }
             if possible_strokes.is_empty() {
                 return Err(anyhow::anyhow!(
-                    "no strokes for vowel {:?}",
-                    syllable.vowel()
+                    "no strokes for vowel {}",
+                    PronunciationSlice(syllable.vowel())
                 ));
             }
             for possible_chords in self.theory.coda_matches(syllable) {
@@ -178,7 +236,10 @@ impl PhoneticTheory {
                 std::mem::swap(&mut possible_strokes, &mut next_strokes);
             }
             if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!("no strokes for coda {:?}", syllable.coda()));
+                return Err(anyhow::anyhow!(
+                    "no strokes for coda {}",
+                    PronunciationSlice(syllable.coda())
+                ));
             }
             let stroke = *possible_strokes.first().ok_or_else(|| {
                 anyhow::anyhow!("no valid strokes found for syllable \"{syllable:#}\"")
@@ -366,8 +427,8 @@ impl Phonology {
         let prev_syllable = self.syllabize_one(word, 0);
         if prev_syllable.onset != 0 {
             return Err(anyhow::anyhow!(
-                "invalid onset: {:?}",
-                &word[..prev_syllable.onset]
+                "invalid onset: {}",
+                PronunciationSlice(&word[..prev_syllable.vowel])
             ));
         }
 
@@ -475,7 +536,7 @@ impl<'w> Syllable<'w> {
 
 impl fmt::Display for Syllable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.as_slice().iter().join(" "))
+        fmt::Display::fmt(&PronunciationSlice(self.as_slice()), f)
     }
 }
 
@@ -549,7 +610,7 @@ mod tests {
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
         let phonology = theory.phonology;
         let actual_syllables = phonology
-            .syllabize_word(&*Pronunciation::from(word))?
+            .syllabize_word(&Pronunciation::from(word))?
             .map(|s| s.to_string())
             .collect::<Vec<_>>();
 
@@ -566,7 +627,7 @@ mod tests {
     ) -> anyhow::Result<()> {
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
-        let actual_outline = theory.get_outline(&*Pronunciation::from(pronunciation), spelling)?;
+        let actual_outline = theory.get_outline(&Pronunciation::from(pronunciation), spelling)?;
         assert_eq!(&*actual_outline, expected_outline);
         Ok(())
     }
