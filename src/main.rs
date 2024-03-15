@@ -155,26 +155,26 @@ impl GenerateOutlines {
                 generated_dict.no_pronunciation.push(word.clone())
             }
             for pron in prons {
-                match theory.get_outline(pron, &word) {
-                    Ok(outline) => {
-                        if let Err(conflict) = generated_dict
-                            .valid_outlines
-                            .insert(word.clone(), outline.clone())
-                        {
-                            let conflict_entry =
-                                generated_dict.conflicts.entry(outline).or_default();
-                            conflict_entry.insert(conflict);
-                            conflict_entry.insert(word.clone());
-                        }
-                    }
-                    Err(error) => {
-                        generated_dict.no_outlines.push(NoOutline {
-                            word: word.clone(),
-                            pronunciation: pron.clone(),
-                            error,
-                        });
-                    }
-                }
+                // match theory.get_outline(pron, &word) {
+                //     Ok(outline) => {
+                //         if let Err(conflict) = generated_dict
+                //             .valid_outlines
+                //             .insert(word.clone(), outline.clone())
+                //         {
+                //             let conflict_entry =
+                //                 generated_dict.conflicts.entry(outline).or_default();
+                //             conflict_entry.insert(conflict);
+                //             conflict_entry.insert(word.clone());
+                //         }
+                //     }
+                //     Err(error) => {
+                //         generated_dict.no_outlines.push(NoOutline {
+                //             word: word.clone(),
+                //             pronunciation: pron.clone(),
+                //             error,
+                //         });
+                //     }
+                // }
             }
         }
         for outline in generated_dict.conflicts.keys() {

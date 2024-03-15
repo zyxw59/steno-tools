@@ -1,17 +1,15 @@
 use std::{
-    borrow::Borrow,
     cmp,
     collections::{BTreeMap, BTreeSet},
     fmt,
     io::BufRead,
-    ops,
     ops::Range,
     rc::Rc,
 };
 
 use itertools::Itertools;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
 
 use crate::{
     chord::Chord,
@@ -26,17 +24,18 @@ pub struct Dictionary {
 impl Dictionary {
     pub fn load_csv(reader: impl BufRead) -> anyhow::Result<Self> {
         let mut this = Self::default();
-        for line in reader.lines() {
-            let line = line?;
-            let Some((word, prons)) = line.split_once(',') else {
-                continue;
-            };
-            let entries = this.entries.entry(word.into()).or_default();
-            for p in prons.trim_matches('"').split(',') {
-                let pron = p.trim().trim_matches('/');
-                entries.push(pron.into());
-            }
-        }
+        // TODO
+        // for line in reader.lines() {
+        //     let line = line?;
+        //     let Some((word, prons)) = line.split_once(',') else {
+        //         continue;
+        //     };
+        //     let entries = this.entries.entry(word.into()).or_default();
+        //     for p in prons.trim_matches('"').split(',') {
+        //         let pron = p.trim().trim_matches('/');
+        //         entries.push(pron.into());
+        //     }
+        // }
         Ok(this)
     }
 
@@ -48,42 +47,55 @@ impl Dictionary {
     }
 }
 
-pub type Pronunciation = Rc<str>;
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[serde(from = "SerdePronunciation")]
+pub struct Pronunciation(Rc<[Phoneme]>);
+crate::deref_impls!(Pronunciation as [Phoneme]);
 
-#[derive(Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum SerdePronunciation {
+    String(String),
+    List(Rc<[Phoneme]>),
+}
+
+impl From<&str> for Pronunciation {
+    fn from(s: &str) -> Self {
+        Self(s.split_whitespace().map(Phoneme::from).collect())
+    }
+}
+
+impl From<SerdePronunciation> for Pronunciation {
+    fn from(s: SerdePronunciation) -> Self {
+        match s {
+            SerdePronunciation::String(s) => s.as_str().into(),
+            SerdePronunciation::List(l) => Self(l),
+        }
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 #[serde(transparent)]
-pub struct Phoneme(Rc<str>);
+pub struct Phoneme(smol_str::SmolStr);
 crate::fmt_impls!(Phoneme);
 
 impl Phoneme {
-    pub fn as_str(&self) -> &str {
-        &self.0
+    fn stress(&self) -> Stress {
+        match self.0.as_bytes().last() {
+            Some(b'1') => Stress::Primary,
+            Some(b'2') => Stress::Secondary,
+            _ => Stress::None,
+        }
     }
-}
 
-impl<S: Into<Rc<str>>> From<S> for Phoneme {
-    fn from(s: S) -> Phoneme {
-        Phoneme(s.into())
-    }
-}
-
-impl ops::Deref for Phoneme {
-    type Target = PhonemeRef;
-
-    fn deref(&self) -> &Self::Target {
-        PhonemeRef::new(&self.0)
-    }
-}
-
-impl Borrow<PhonemeRef> for Phoneme {
-    fn borrow(&self) -> &PhonemeRef {
-        self
+    fn ignore_stress(&self) -> &str {
+        self.0.trim_end_matches(&['0', '1', '2'])
     }
 }
 
 impl Ord for Phoneme {
     fn cmp(&self, other: &Self) -> cmp::Ordering {
-        PhonemeRef::cmp(self, other)
+        self.ignore_stress().cmp(other.ignore_stress())
     }
 }
 
@@ -93,40 +105,17 @@ impl PartialOrd for Phoneme {
     }
 }
 
-#[derive(Hash, Eq, PartialEq)]
-#[repr(transparent)]
-pub struct PhonemeRef(str);
+impl Eq for Phoneme {}
 
-impl PhonemeRef {
-    pub fn new(s: &str) -> &Self {
-        unsafe { &*(s as *const str as *const Self) }
+impl PartialEq for Phoneme {
+    fn eq(&self, other: &Self) -> bool {
+        self.ignore_stress() == other.ignore_stress()
     }
 }
 
-impl ops::Deref for PhonemeRef {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-/// Order phonemes first by decreasing length order, then by normal string ordering. This is so
-/// that when constructing regexes, the sorted order will produce a regex that preferentially
-/// matches longer phonemes.
-impl Ord for PhonemeRef {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.0
-            .len()
-            .cmp(&other.0.len())
-            .reverse()
-            .then_with(|| self.0.cmp(&other.0))
-    }
-}
-
-impl PartialOrd for PhonemeRef {
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.cmp(other))
+impl<S: AsRef<str>> From<S> for Phoneme {
+    fn from(s: S) -> Phoneme {
+        Phoneme(SmolStr::new(s))
     }
 }
 
@@ -137,10 +126,13 @@ pub struct PhoneticTheory {
 }
 
 impl PhoneticTheory {
-    pub fn get_outline(&self, pronunciation: &str, _spelling: &str) -> anyhow::Result<Outline> {
-        let mut strokes = Vec::new();
-        for syllable in self.phonology.syllabize_word(pronunciation) {
-            let syllable = syllable?;
+    pub fn get_outline(
+        &self,
+        pronunciation: &[Phoneme],
+        _spelling: &str,
+    ) -> anyhow::Result<Outline> {
+        let mut strokes: Vec<Chord> = Vec::new();
+        for syllable in self.phonology.syllabize_word(pronunciation)? {
             let mut possible_strokes = vec![Chord::empty()];
             let mut next_strokes = Vec::new();
             for possible_chords in self.theory.onset_matches(syllable) {
@@ -198,10 +190,34 @@ impl PhoneticTheory {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct RawTheory {
-    onsets: BTreeMap<Phoneme, OutputRules>,
-    vowels: BTreeMap<Phoneme, OutputRules>,
-    codas: BTreeMap<Phoneme, OutputRules>,
+pub struct Theory {
+    onsets: PronunciationMap<OutputRules>,
+    vowels: PronunciationMap<OutputRules>,
+    codas: PronunciationMap<OutputRules>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(from = "BTreeMap<Pronunciation, V>")]
+struct PronunciationMap<V> {
+    map: BTreeMap<Pronunciation, V>,
+    min_key_len: usize,
+    max_key_len: usize,
+}
+
+impl<V> From<BTreeMap<Pronunciation, V>> for PronunciationMap<V> {
+    fn from(map: BTreeMap<Pronunciation, V>) -> Self {
+        let (min_key_len, max_key_len) = map
+            .keys()
+            .map(|k| k.len())
+            .minmax()
+            .into_option()
+            .unwrap_or((0, 0));
+        Self {
+            map,
+            min_key_len,
+            max_key_len,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -213,8 +229,8 @@ enum OutputRules {
 
 #[derive(Debug, Clone, Deserialize)]
 struct OutputRule {
-    prev: Option<Phoneme>,
-    next: Option<Phoneme>,
+    prev: Option<Pronunciation>,
+    next: Option<Pronunciation>,
     chords: Rc<[Chord]>,
 }
 
@@ -222,95 +238,81 @@ impl OutputRule {
     fn matches_at(&self, syllable: Syllable<'_>, at: Range<usize>) -> bool {
         self.prev
             .as_ref()
-            .map(|ph| syllable.until_index(at.start).ends_with(ph.as_str()))
+            .map(|p| syllable.until_index(at.start).ends_with(p))
             .unwrap_or(true)
             && self
                 .next
                 .as_ref()
-                .map(|ph| syllable.after_index(at.end).starts_with(ph.as_str()))
+                .map(|p| syllable.after_index(at.end).starts_with(p))
                 .unwrap_or(true)
     }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(try_from = "RawTheory")]
-pub struct Theory {
-    onset_pattern: Regex,
-    vowel_pattern: Regex,
-    coda_pattern: Regex,
-    raw: RawTheory,
 }
 
 impl Theory {
     fn onset_matches<'t, 'w>(&'t self, syllable: Syllable<'w>) -> MatchChordIter<'t, 'w> {
         MatchChordIter {
-            matches: self.onset_pattern.find_iter(syllable.onset()),
-            segment_start: syllable.indices.onset,
-            map: &self.raw.onsets,
+            map: &self.onsets,
+            range: syllable.onset_range(),
             syllable,
         }
     }
 
     fn vowel_matches<'t, 'w>(&'t self, syllable: Syllable<'w>) -> MatchChordIter<'t, 'w> {
         MatchChordIter {
-            matches: self.vowel_pattern.find_iter(syllable.vowel()),
-            segment_start: syllable.indices.vowel,
-            map: &self.raw.vowels,
+            map: &self.vowels,
+            range: syllable.vowel_range(),
             syllable,
         }
     }
 
     fn coda_matches<'t, 'w>(&'t self, syllable: Syllable<'w>) -> MatchChordIter<'t, 'w> {
         MatchChordIter {
-            matches: self.coda_pattern.find_iter(syllable.coda()),
-            segment_start: syllable.indices.coda,
-            map: &self.raw.codas,
+            map: &self.codas,
+            range: syllable.coda_range(),
             syllable,
         }
     }
 }
 
 struct MatchChordIter<'t, 'w> {
-    matches: regex::Matches<'t, 'w>,
-    map: &'t BTreeMap<Phoneme, OutputRules>,
+    map: &'t PronunciationMap<OutputRules>,
     syllable: Syllable<'w>,
-    segment_start: usize,
+    range: Range<usize>,
 }
 
 impl<'t, 'w> Iterator for MatchChordIter<'t, 'w> {
     type Item = &'t [Chord];
 
     fn next(&mut self) -> Option<Self::Item> {
-        let m = self.matches.next()?;
-        Some(match self.map.get(PhonemeRef::new(m.as_str())) {
-            Some(OutputRules::Simple(outputs)) => outputs,
-            Some(OutputRules::Complex(rules)) => {
-                // match range is relative to the start of the segment (onset/vowel/coda), so we
-                // need to increment it here to get the true indices.
-                let range = (m.start() + self.segment_start)..(m.end() + self.segment_start);
-                rules
-                    .iter()
-                    .find(|rule| rule.matches_at(self.syllable, range.clone()))
-                    .map_or(&[], |rule| &*rule.chords)
-            }
-            None => &[],
-        })
-    }
-}
-
-impl TryFrom<RawTheory> for Theory {
-    type Error = regex::Error;
-
-    fn try_from(raw: RawTheory) -> Result<Self, Self::Error> {
-        let onset_pattern = pattern_from_set(raw.onsets.keys().cloned(), false)?;
-        let vowel_pattern = pattern_from_set(raw.vowels.keys().cloned(), false)?;
-        let coda_pattern = pattern_from_set(raw.codas.keys().cloned(), false)?;
-        Ok(Self {
-            onset_pattern,
-            vowel_pattern,
-            coda_pattern,
-            raw,
-        })
+        if self.range.is_empty() {
+            return None;
+        }
+        let start = self.range.start;
+        let max_len = self.map.max_key_len.min(self.range.end - self.range.start);
+        // check prefixes in descending order
+        for len in (self.map.min_key_len..=max_len).rev() {
+            let slice = &self.syllable.word[start..start + len];
+            let chords = match self.map.map.get(slice) {
+                Some(OutputRules::Simple(chords)) => chords,
+                Some(OutputRules::Complex(rules)) => {
+                    if let Some(chords) = rules
+                        .iter()
+                        .find(|rule| rule.matches_at(self.syllable, start..start + len))
+                        .map(|rule| &*rule.chords)
+                    {
+                        chords
+                    } else {
+                        continue;
+                    }
+                }
+                None => continue,
+            };
+            self.range.start += len;
+            return Some(chords);
+        }
+        // no matches
+        self.range.start += 1;
+        Some(&[])
     }
 }
 
@@ -318,10 +320,7 @@ impl TryFrom<RawTheory> for Theory {
 pub struct RawPhonology {
     onset_singles: BTreeSet<Phoneme>,
     onset_clusters: Vec<OnsetCluster>,
-    consonants: BTreeSet<Phoneme>,
     vowels: BTreeSet<Phoneme>,
-    primary_stress: Phoneme,
-    secondary_stress: Phoneme,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -330,129 +329,90 @@ struct OnsetCluster {
     second: BTreeSet<Phoneme>,
 }
 
-impl TryFrom<RawPhonology> for Phonology {
-    type Error = regex::Error;
-
-    fn try_from(raw: RawPhonology) -> Result<Self, Self::Error> {
-        let onset_singles = pattern_from_set(raw.onset_singles, true)?;
-
+impl From<RawPhonology> for Phonology {
+    fn from(raw: RawPhonology) -> Self {
         // map (second_consonant -> [first_consonants])
-        let mut onset_clusters_map = BTreeMap::<_, BTreeSet<_>>::new();
+        let mut onset_clusters = BTreeMap::<_, BTreeSet<_>>::new();
         for cluster in raw.onset_clusters {
             for ph in cluster.second {
-                onset_clusters_map
+                onset_clusters
                     .entry(ph)
                     .or_default()
                     .extend(cluster.first.iter().cloned());
             }
         }
-        let onset_clusters = onset_clusters_map
-            .into_iter()
-            .map(|(first, seconds)| pattern_from_set(seconds, true).map(|pat| (first, pat)))
-            .collect::<Result<_, _>>()?;
-
-        let stress_markers = [
-            (raw.primary_stress, Stress::Primary),
-            (raw.secondary_stress, Stress::Secondary),
-        ]
-        .into_iter()
-        .collect::<BTreeMap<_, _>>();
-        let stress_pattern = pattern_from_set(stress_markers.keys().cloned(), false)?;
-        let consonants = pattern_from_set(raw.consonants, true)?;
-        let vowels = pattern_from_set(raw.vowels, false)?;
-
-        Ok(Phonology {
-            onset_singles,
+        Phonology {
+            onset_singles: raw.onset_singles,
             onset_clusters,
-            consonants,
-            vowels,
-            stress_pattern,
-            stress_markers,
-        })
+            vowels: raw.vowels,
+        }
     }
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(try_from = "RawPhonology")]
 pub struct Phonology {
-    onset_singles: Regex,
-    onset_clusters: BTreeMap<Phoneme, Regex>,
-    consonants: Regex,
-    vowels: Regex,
-    stress_pattern: Regex,
-    stress_markers: BTreeMap<Phoneme, Stress>,
+    onset_singles: BTreeSet<Phoneme>,
+    onset_clusters: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
+    vowels: BTreeSet<Phoneme>,
 }
 
 impl Phonology {
     #[allow(unused)]
-    pub fn syllabize_word<'p, 'w>(&'p self, word: &'w str) -> SyllableIterator<'p, 'w> {
-        let mut next_stress_marker = self.next_stress_marker(word, 0);
+    pub fn syllabize_word<'p, 'w>(
+        &'p self,
+        word: &'w [Phoneme],
+    ) -> anyhow::Result<SyllableIterator<'p, 'w>> {
         let prev_syllable = self.syllabize_one(word, 0);
-        let prev_syllable_stress;
-        let prev_stress_marker;
-        if next_stress_marker.1.start == 0 {
-            prev_syllable_stress = next_stress_marker.0;
-            prev_stress_marker = Some(next_stress_marker.1.clone());
-            // get the *next* stress marker, since we've already passed this one by the first
-            // syllable
-            next_stress_marker = self.next_stress_marker(word, next_stress_marker.1.end);
-        } else {
-            prev_stress_marker = Some(0..0);
-            prev_syllable_stress = Stress::None;
+        if prev_syllable.onset != 0 {
+            return Err(anyhow::anyhow!(
+                "invalid onset: {:?}",
+                &word[..prev_syllable.onset]
+            ));
         }
 
-        SyllableIterator {
+        Ok(SyllableIterator {
             phonology: self,
             word,
-            next_stress_marker,
             prev_syllable,
-            prev_syllable_stress,
-            prev_stress_marker,
-        }
+        })
     }
 
-    fn syllabize_one(&self, word: &str, start_at: usize) -> SyllableIndices {
+    fn syllabize_one(&self, word: &[Phoneme], start_at: usize) -> SyllableIndices {
         // find the first vowel
-        let Some(vowel_match) = self.vowels.find_at(word, start_at) else {
+        let Some(mut vowel) = word[start_at..]
+            .iter()
+            .position(|ph| self.vowels.contains(ph))
+        else {
             return SyllableIndices {
+                stress: Stress::None,
                 onset: word.len(),
                 vowel: word.len(),
                 coda: word.len(),
             };
         };
-        let vowel = vowel_match.start();
-        let coda = vowel_match.end();
+        vowel += start_at;
+        let stress = word[vowel].stress();
+        let coda = vowel + 1;
         // work backwards to find the maximally valid onset
-        let mut onset = vowel;
-        let mut regex = &self.onset_singles;
-        while let Some(prev_in_cluster) = regex.find(&word[..onset]) {
-            if let Some(consonant) = self.consonants.find(&word[..onset]) {
-                if consonant.start() != prev_in_cluster.start() {
-                    // there was another (longer) consonant that matched here
-                    break;
+        let mut allowed_phonemes = &self.onset_singles;
+        let empty_set = BTreeSet::new();
+        let onset = word[..vowel]
+            .iter()
+            .rposition(|ph| {
+                if !allowed_phonemes.contains(ph) {
+                    return true;
                 }
-            }
-            onset = prev_in_cluster.start();
-            let Some(prev_regex) = self
-                .onset_clusters
-                .get(PhonemeRef::new(prev_in_cluster.as_str()))
-            else {
-                break;
-            };
-            regex = prev_regex;
-        }
-        SyllableIndices { onset, vowel, coda }
-    }
-
-    fn next_stress_marker(&self, word: &str, start_at: usize) -> (Stress, Range<usize>) {
-        if let Some(m) = self.stress_pattern.find_at(word, start_at) {
-            let stress = self
-                .stress_markers
-                .get(PhonemeRef::new(m.as_str()))
-                .expect("unexpected stress marker match");
-            (*stress, m.range())
-        } else {
-            (Stress::None, word.len()..word.len())
+                allowed_phonemes = self.onset_clusters.get(ph).unwrap_or(&empty_set);
+                false
+            })
+            .map(|idx| idx + 1)
+            .unwrap_or(0);
+        SyllableIndices {
+            stress,
+            onset,
+            vowel,
+            coda,
         }
     }
 }
@@ -460,6 +420,7 @@ impl Phonology {
 /// Start indices of the onset, vowel, and coda of a syllable
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 struct SyllableIndices {
+    stress: Stress,
     onset: usize,
     vowel: usize,
     coda: usize,
@@ -467,55 +428,54 @@ struct SyllableIndices {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct Syllable<'w> {
-    pub stress: Stress,
-    word: &'w str,
-    start: usize,
+    word: &'w [Phoneme],
     indices: SyllableIndices,
     end: usize,
 }
 
 impl<'w> Syllable<'w> {
-    pub fn onset(&self) -> &'w str {
-        &self.word[self.indices.onset..self.indices.vowel]
+    pub fn onset(&self) -> &'w [Phoneme] {
+        &self.word[self.onset_range()]
     }
 
-    pub fn vowel(&self) -> &'w str {
-        &self.word[self.indices.vowel..self.indices.coda]
+    fn onset_range(&self) -> Range<usize> {
+        self.indices.onset..self.indices.vowel
     }
 
-    pub fn coda(&self) -> &'w str {
-        &self.word[self.indices.coda..self.end]
+    pub fn vowel(&self) -> &'w [Phoneme] {
+        &self.word[self.vowel_range()]
     }
 
-    pub fn as_str(&self) -> &'w str {
-        &self.word[self.start..self.end]
+    fn vowel_range(&self) -> Range<usize> {
+        self.indices.vowel..self.indices.coda
+    }
+
+    pub fn coda(&self) -> &'w [Phoneme] {
+        &self.word[self.coda_range()]
+    }
+
+    fn coda_range(&self) -> Range<usize> {
+        self.indices.coda..self.end
+    }
+
+    pub fn as_slice(&self) -> &'w [Phoneme] {
+        &self.word[self.indices.onset..self.end]
     }
 
     /// Returns the part of the syllable up to the specified index into the word.
-    fn until_index(&self, index: usize) -> &'w str {
-        &self.word[self.start..index]
+    fn until_index(&self, index: usize) -> &'w [Phoneme] {
+        &self.word[self.indices.onset..index]
     }
 
     /// Returns the part of the syllable after the specified index into the word.
-    fn after_index(&self, index: usize) -> &'w str {
+    fn after_index(&self, index: usize) -> &'w [Phoneme] {
         &self.word[index..self.end]
     }
 }
 
 impl fmt::Display for Syllable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if f.alternate() {
-            f.write_str(&self.word[self.start..self.indices.onset])?;
-            f.write_str(" ")?;
-            f.write_str(self.onset())?;
-            f.write_str(" ")?;
-            f.write_str(self.vowel())?;
-            f.write_str(" ")?;
-            f.write_str(self.coda())?;
-        } else {
-            f.write_str(self.as_str())?;
-        }
-        Ok(())
+        f.write_str(&self.as_slice().iter().join(" "))
     }
 }
 
@@ -538,95 +498,39 @@ impl fmt::Display for Stress {
 
 pub struct SyllableIterator<'p, 'w> {
     phonology: &'p Phonology,
-    word: &'w str,
-    next_stress_marker: (Stress, Range<usize>),
+    word: &'w [Phoneme],
     prev_syllable: SyllableIndices,
-    prev_syllable_stress: Stress,
-    prev_stress_marker: Option<Range<usize>>,
 }
 
 impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
-    type Item = anyhow::Result<Syllable<'w>>;
+    type Item = Syllable<'w>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.prev_syllable.onset >= self.word.len() {
             None
         } else {
-            let mut result = Ok(());
-            let start;
-            if let Some(prev_stress_marker) = self.prev_stress_marker.take() {
-                start = prev_stress_marker.start;
-                if self.prev_syllable.onset > prev_stress_marker.end {
-                    result = Err(anyhow::anyhow!(
-                        "invalid onset: {:?}",
-                        &self.word[prev_stress_marker.end..self.prev_syllable.vowel]
-                    ));
-                }
-            } else {
-                start = self.prev_syllable.onset;
-            }
-
             let next_syllable = self
                 .phonology
                 .syllabize_one(self.word, self.prev_syllable.coda);
-
-            let next_syllable_stress;
-            let coda_end;
-            if next_syllable.vowel >= self.next_stress_marker.1.end {
-                self.prev_stress_marker = Some(self.next_stress_marker.1.clone());
-                next_syllable_stress = self.next_stress_marker.0;
-                coda_end = self.next_stress_marker.1.start;
-                self.next_stress_marker = self
-                    .phonology
-                    .next_stress_marker(self.word, self.next_stress_marker.1.end);
-            } else {
-                self.prev_stress_marker = None;
-                next_syllable_stress = Stress::None;
-                coda_end = self.prev_syllable.coda.max(next_syllable.onset);
-            }
+            let end = self.prev_syllable.coda.max(next_syllable.onset);
             let item = Syllable {
-                stress: self.prev_syllable_stress,
                 word: self.word,
-                start,
                 indices: self.prev_syllable,
-                end: coda_end,
+                end,
             };
             self.prev_syllable = next_syllable;
-            self.prev_syllable_stress = next_syllable_stress;
-            Some(result.map(|()| item))
+            Some(item)
         }
     }
 }
 
-fn pattern_from_set(
-    set: impl IntoIterator<Item = Phoneme>,
-    right_anchored: bool,
-) -> Result<Regex, regex::Error> {
-    let initial = if right_anchored {
-        "(?:".to_owned()
-    } else {
-        String::new()
-    };
-    let mut pattern = set.into_iter().fold(initial, |mut pat, phon| {
-        regex_syntax::escape_into(&phon, &mut pat);
-        pat.push('|');
-        pat
-    });
-    // remove trailing '|'
-    pattern.pop();
-    if right_anchored {
-        pattern += ")$";
-    }
-    Regex::new(&pattern)
-}
-
 #[cfg(test)]
 mod tests {
-    use std::{collections::BTreeSet, fs::File, io::BufReader};
+    use std::{fs::File, io::BufReader};
 
     use test_case::test_case;
 
-    use super::{OnsetCluster, Phoneme, PhoneticTheory, Phonology, RawPhonology};
+    use super::{PhoneticTheory, Pronunciation};
 
     #[test]
     fn load_theory() -> anyhow::Result<()> {
@@ -635,56 +539,26 @@ mod tests {
         Ok(())
     }
 
-    fn phoneme_set(s: &str) -> BTreeSet<Phoneme> {
-        s.split_whitespace().map(|ph| Phoneme(ph.into())).collect()
-    }
-
-    #[test_case("sput", &["sput"] ; "one syllable")]
-    #[test_case("epsol", &["ep", "sol"] ; "vowel initial")]
-    #[test_case("talsprot", &["tal", "sprot"] ; "complex onset")]
-    #[test_case("tʃitʃrek", &["tʃitʃ", "rek"] ; "longer consonants")]
-    #[test_case("tejis", &["tej", "jis"] ; "diphthong onset overlap")]
-    #[test_case("tejkis", &["tej", "kis"] ; "diphthong plus consonant")]
-    #[test_case("ˈtara", &["ˈta", "ra"] ; "initial stress")]
-    #[test_case("ˈata", &["ˈa", "ta"] ; "initial stress without onset")]
-    #[test_case("tasˈpal", &["tas", "ˈpal"] ; "medial stress")]
-    #[test_case("kajˈteraˌpat", &["kaj", "ˈte", "ra", "ˌpat"] ; "multiple stresses")]
+    #[test_case("S P UH T", &["S P UH T"] ; "one syllable")]
+    #[test_case("EH P S AO L", &["EH P", "S AO L"] ; "vowel initial")]
+    #[test_case("T AE L S P R AO T", &["T AE L", "S P R AO T"] ; "complex onset")]
+    #[test_case("CH IH CH R EH K", &["CH IH CH", "R EH K"] ; "longer consonants")]
+    #[test_case("T EY IH S", &["T EY", "IH S"] ; "consecutive vowels")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
-        let phonology: Phonology = RawPhonology {
-            onset_singles: phoneme_set("p t k tʃ s ʃ r l j"),
-            onset_clusters: [
-                OnsetCluster {
-                    first: phoneme_set("p k"),
-                    second: phoneme_set("r l"),
-                },
-                OnsetCluster {
-                    first: phoneme_set("t ʃ"),
-                    second: phoneme_set("r"),
-                },
-                OnsetCluster {
-                    first: phoneme_set("s"),
-                    second: phoneme_set("p t k l"),
-                },
-            ]
-            .into_iter()
-            .collect(),
-            consonants: phoneme_set("p t k tʃ s ʃ r l j"),
-            vowels: phoneme_set("a e i o u ej"),
-            primary_stress: "ˈ".into(),
-            secondary_stress: "ˌ".into(),
-        }
-        .try_into()?;
+        let theory: PhoneticTheory =
+            serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
+        let phonology = theory.phonology;
         let actual_syllables = phonology
-            .syllabize_word(word)
-            .map(|res| res.map(|s| s.to_string()))
-            .collect::<Result<Vec<_>, _>>()?;
+            .syllabize_word(&*Pronunciation::from(word))?
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
 
         assert_eq!(actual_syllables, expected_syllables);
         Ok(())
     }
 
-    #[test_case("a", "ˈej", "AEU" ; "a")]
-    #[test_case("all", "ˈol", "AUL" ; "all")]
+    #[test_case("a", "EY1", "AEU" ; "a")]
+    #[test_case("all", "AO1 L", "AUL" ; "all")]
     fn word_to_outline(
         spelling: &str,
         pronunciation: &str,
@@ -692,7 +566,7 @@ mod tests {
     ) -> anyhow::Result<()> {
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
-        let actual_outline = theory.get_outline(pronunciation, spelling)?;
+        let actual_outline = theory.get_outline(&*Pronunciation::from(pronunciation), spelling)?;
         assert_eq!(&*actual_outline, expected_outline);
         Ok(())
     }
