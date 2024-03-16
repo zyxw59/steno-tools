@@ -292,15 +292,18 @@ enum OutputRules {
 struct OutputRule {
     prev: Option<Pronunciation>,
     next: Option<Pronunciation>,
+    stress: Option<Stress>,
     chords: Rc<[Chord]>,
 }
 
 impl OutputRule {
     fn matches_at(&self, syllable: Syllable<'_>, at: Range<usize>) -> bool {
-        self.prev
-            .as_ref()
-            .map(|p| syllable.until_index(at.start).ends_with(p))
-            .unwrap_or(true)
+        self.stress.map(|st| st == syllable.indices.stress).unwrap_or(true)
+            && self
+                .prev
+                .as_ref()
+                .map(|p| syllable.until_index(at.start).ends_with(p))
+                .unwrap_or(true)
             && self
                 .next
                 .as_ref()
@@ -540,21 +543,11 @@ impl fmt::Display for Syllable<'_> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum Stress {
     None,
     Secondary,
     Primary,
-}
-
-impl fmt::Display for Stress {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::None => Ok(()),
-            Self::Secondary => f.write_str("ˌ"),
-            Self::Primary => f.write_str("ˈ"),
-        }
-    }
 }
 
 pub struct SyllableIterator<'p, 'w> {
@@ -620,6 +613,8 @@ mod tests {
 
     #[test_case("a", "EY1", "AEU" ; "a")]
     #[test_case("all", "AO1 L", "AUL" ; "all")]
+    #[test_case("young", "Y AH1 NG", "KWRUPBG" ; "young")]
+    #[test_case("emulate", "EH1 M Y AH0 L EY2 T", "E/PHAOU/HRAEUT" ; "emulate")]
     fn word_to_outline(
         spelling: &str,
         pronunciation: &str,

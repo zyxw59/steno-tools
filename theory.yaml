@@ -2,6 +2,7 @@ theory:
   vowels:
     "AH":
       - prev: "Y"
+        stress: None
         chords: ["AOU"]
       - chords: ["U"]
     "AA":
@@ -19,6 +20,7 @@ theory:
     "EH": ["E"]
     "ER":
       - prev: "Y"
+        stress: None
         chords: ["AOUR"]
       - chords: ["UR"]
     "UH":
@@ -62,8 +64,10 @@ theory:
     "W": ["W"]
     "Y":
       - next: "AH"
+        stress: None
         chords: [""]
       - next: "ER"
+        stress: None
         chords: [""]
       - next: "UH"
         chords: [""]
