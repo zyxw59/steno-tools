@@ -15,7 +15,10 @@ theory:
       - next: "L"
         chords: ["AU"]
       - chords: ["O"]
-    "AE": ["A"]
+    "AE":
+      - next_broad: "R"
+        chords: ["E"]
+      - chords: ["A"]
     "IH": ["EU"]
     "EH": ["E"]
     "ER":
@@ -28,7 +31,10 @@ theory:
         chords: ["AOU"]
       - chords: ["AO"]
     "IY": ["AOE"]
-    "EY": ["AEU"]
+    "EY":
+      - next_broad: "R"
+        chords: ["E"]
+      - chords: ["AEU"]
     "AY": ["AOEU"]
     "OY": ["OEU"]
     "AW": ["OU"]

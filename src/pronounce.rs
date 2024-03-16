@@ -291,24 +291,52 @@ enum OutputRules {
 #[derive(Debug, Clone, Deserialize)]
 struct OutputRule {
     prev: Option<Pronunciation>,
+    prev_broad: Option<Pronunciation>,
     next: Option<Pronunciation>,
+    next_broad: Option<Pronunciation>,
     stress: Option<Stress>,
     chords: Rc<[Chord]>,
 }
 
 impl OutputRule {
     fn matches_at(&self, syllable: Syllable<'_>, at: Range<usize>) -> bool {
-        self.stress.map(|st| st == syllable.indices.stress).unwrap_or(true)
-            && self
-                .prev
-                .as_ref()
-                .map(|p| syllable.until_index(at.start).ends_with(p))
-                .unwrap_or(true)
-            && self
-                .next
-                .as_ref()
-                .map(|p| syllable.after_index(at.end).starts_with(p))
-                .unwrap_or(true)
+        [
+            Self::matches_stress,
+            Self::matches_prev,
+            Self::matches_next,
+            Self::matches_prev_broad,
+            Self::matches_next_broad,
+        ]
+        .into_iter()
+        .all(|f| f(self, syllable, at.clone()).unwrap_or(true))
+    }
+
+    fn matches_stress(&self, syllable: Syllable<'_>, _at: Range<usize>) -> Option<bool> {
+        self.stress.map(|st| st == syllable.indices.stress)
+    }
+
+    fn matches_prev(&self, syllable: Syllable<'_>, at: Range<usize>) -> Option<bool> {
+        self.prev
+            .as_ref()
+            .map(|p| syllable.until_index(at.start).ends_with(p))
+    }
+
+    fn matches_next(&self, syllable: Syllable<'_>, at: Range<usize>) -> Option<bool> {
+        self.next
+            .as_ref()
+            .map(|p| syllable.after_index(at.end).starts_with(p))
+    }
+
+    fn matches_prev_broad(&self, syllable: Syllable<'_>, at: Range<usize>) -> Option<bool> {
+        self.prev_broad
+            .as_ref()
+            .map(|p| syllable.word[..at.start].ends_with(p))
+    }
+
+    fn matches_next_broad(&self, syllable: Syllable<'_>, at: Range<usize>) -> Option<bool> {
+        self.next_broad
+            .as_ref()
+            .map(|p| syllable.word[at.end..].starts_with(p))
     }
 }
 
@@ -615,6 +643,7 @@ mod tests {
     #[test_case("all", "AO1 L", "AUL" ; "all")]
     #[test_case("young", "Y AH1 NG", "KWRUPBG" ; "young")]
     #[test_case("emulate", "EH1 M Y AH0 L EY2 T", "E/PHAOU/HRAEUT" ; "emulate")]
+    #[test_case("marry", "M AE1 R IY0", "PHE/RAOE" ; "marry")]
     fn word_to_outline(
         spelling: &str,
         pronunciation: &str,
