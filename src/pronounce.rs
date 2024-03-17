@@ -190,63 +190,79 @@ impl PhoneticTheory {
         _spelling: &str,
     ) -> anyhow::Result<Outline> {
         let mut strokes: Vec<Chord> = Vec::new();
+        let mut possible_strokes = vec![(None, Chord::empty())];
+        let mut next_strokes = Vec::new();
         for syllable in self.phonology.syllabize_word(pronunciation)? {
-            let mut possible_strokes = vec![Chord::empty()];
-            let mut next_strokes = Vec::new();
-            for possible_chords in self.theory.onset_matches(syllable) {
-                for st in possible_strokes.drain(..) {
-                    for &ch in possible_chords {
-                        if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                            next_strokes.push(st | ch);
-                        }
-                    }
-                }
-                std::mem::swap(&mut possible_strokes, &mut next_strokes);
-            }
-            if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!(
-                    "no strokes for onset {}",
-                    PronunciationSlice(syllable.onset())
-                ));
-            }
-            for possible_chords in self.theory.vowel_matches(syllable) {
-                for st in possible_strokes.drain(..) {
-                    for &ch in possible_chords {
-                        if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                            next_strokes.push(st | ch);
-                        }
-                    }
-                }
-                std::mem::swap(&mut possible_strokes, &mut next_strokes);
-            }
-            if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!(
-                    "no strokes for vowel {}",
-                    PronunciationSlice(syllable.vowel())
-                ));
-            }
-            for possible_chords in self.theory.coda_matches(syllable) {
-                for st in possible_strokes.drain(..) {
-                    for &ch in possible_chords {
-                        if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                            next_strokes.push(st | ch);
-                        }
-                    }
-                }
-                std::mem::swap(&mut possible_strokes, &mut next_strokes);
-            }
-            if possible_strokes.is_empty() {
-                return Err(anyhow::anyhow!(
-                    "no strokes for coda {}",
-                    PronunciationSlice(syllable.coda())
-                ));
-            }
-            let stroke = *possible_strokes.first().ok_or_else(|| {
+            self.strokes_for_syllable(syllable, &mut possible_strokes, &mut next_strokes)?;
+            let (prev, stroke) = *possible_strokes.first().ok_or_else(|| {
                 anyhow::anyhow!("no valid strokes found for syllable \"{syllable:#}\"")
             })?;
+            if let Some(prev) = prev {
+                strokes.push(prev);
+            }
             strokes.push(stroke);
+            possible_strokes.clear();
+            possible_strokes.push((None, Chord::empty()));
+            debug_assert!(next_strokes.is_empty());
         }
         Ok(strokes.into_iter().join("/").into())
+    }
+
+    fn strokes_for_syllable(
+        &self,
+        syllable: Syllable,
+        possible_strokes: &mut Vec<(Option<Chord>, Chord)>,
+        next_strokes: &mut Vec<(Option<Chord>, Chord)>,
+    ) -> anyhow::Result<()> {
+        for possible_chords in self.theory.onset_matches(syllable) {
+            for (prev, st) in possible_strokes.drain(..) {
+                for &ch in possible_chords {
+                    if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                        next_strokes.push((prev, st | ch));
+                    }
+                }
+            }
+            std::mem::swap(possible_strokes, next_strokes);
+        }
+        if possible_strokes.is_empty() {
+            return Err(anyhow::anyhow!(
+                "no strokes for onset {}",
+                PronunciationSlice(syllable.onset())
+            ));
+        }
+        for possible_chords in self.theory.vowel_matches(syllable) {
+            for (prev, st) in possible_strokes.drain(..) {
+                for &ch in possible_chords {
+                    if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                        next_strokes.push((prev, st | ch));
+                    }
+                }
+            }
+            std::mem::swap(possible_strokes, next_strokes);
+        }
+        if possible_strokes.is_empty() {
+            return Err(anyhow::anyhow!(
+                "no strokes for vowel {}",
+                PronunciationSlice(syllable.vowel())
+            ));
+        }
+        for possible_chords in self.theory.coda_matches(syllable) {
+            for (prev, st) in possible_strokes.drain(..) {
+                for &ch in possible_chords {
+                    if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                        next_strokes.push((prev, st | ch));
+                    }
+                }
+            }
+            std::mem::swap(possible_strokes, next_strokes);
+        }
+        if possible_strokes.is_empty() {
+            return Err(anyhow::anyhow!(
+                "no strokes for coda {}",
+                PronunciationSlice(syllable.coda())
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -255,6 +271,8 @@ pub struct Theory {
     onsets: PronunciationMap<OutputRules>,
     vowels: PronunciationMap<OutputRules>,
     codas: PronunciationMap<OutputRules>,
+    #[serde(default)]
+    syllables: PronunciationMap<Rc<[SyllableRule]>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -263,6 +281,16 @@ struct PronunciationMap<V> {
     map: BTreeMap<Pronunciation, V>,
     min_key_len: usize,
     max_key_len: usize,
+}
+
+impl<V> Default for PronunciationMap<V> {
+    fn default() -> Self {
+        Self {
+            map: Default::default(),
+            min_key_len: 0,
+            max_key_len: 0,
+        }
+    }
 }
 
 impl<V> From<BTreeMap<Pronunciation, V>> for PronunciationMap<V> {
@@ -338,6 +366,20 @@ impl OutputRule {
             .as_ref()
             .map(|p| syllable.word[at.end..].starts_with(p))
     }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SyllableRule {
+    prev: Option<Pronunciation>,
+    next: Option<Pronunciation>,
+    stress: Option<Stress>,
+    fold_into: FoldInto,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+enum FoldInto {
+    Previous,
+    Next,
 }
 
 impl Theory {
