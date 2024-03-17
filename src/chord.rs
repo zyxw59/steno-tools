@@ -3,7 +3,7 @@ use std::{fmt, str::FromStr};
 use serde::{Deserialize, Serialize};
 
 bitflags::bitflags! {
-    #[derive(Clone, Copy, Eq, PartialEq)]
+    #[derive(Clone, Copy, Default, Eq, PartialEq)]
     pub struct Chord: u32 {
         const NUMBER  = 1 << 0;
         const CARET   = 1 << 1;
