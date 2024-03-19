@@ -121,6 +121,24 @@ theory:
     "L M": ["-PBL"]
     "L P": ["-BL"]
     "L B": ["-BL"]
+  prefixes:
+    "IH K":
+      - take_next: "S P"
+        stress: None
+        chords: ["KP"]
+      - take_next: "S K"
+        stress: None
+        chords: ["KP"]
+      - take_next: "S T"
+        stress: None
+        chords: ["KP"]
+      - take_next: "S"
+        stress: None
+        chords: ["KP"]
+    "IH K S":
+      - take_next: "CH"
+        stress: None
+        chords: ["KPH"]
 
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",

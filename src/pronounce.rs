@@ -194,9 +194,10 @@ impl PhoneticTheory {
             let mut next_outlines = Vec::new();
             for outline in &possible_outlines {
                 let st = outline.last_stroke;
-                for &ch in self.theory.get_prefix(syllable) {
+                let (chords, skip) = self.theory.get_prefix(syllable, outline.skip);
+                for &ch in chords {
                     if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                        next_outlines.push(outline.with_stroke(st | ch))
+                        next_outlines.push(outline.with_stroke_and_skip(st | ch, skip))
                     }
                 }
             }
@@ -231,8 +232,12 @@ impl PhoneticTheory {
         possible_outlines: &mut Vec<OutlineBuilder>,
     ) -> anyhow::Result<()> {
         let mut next_outlines = Vec::new();
-        for possible_chords in self.theory.onset_matches(syllable) {
+        for possible_chords in self.theory.onset_matches(syllable){
             for outline in possible_outlines.drain(..) {
+                if outline.skip > 0 {
+                    next_outlines.push(outline.decrement_skip());
+                    continue;
+                }
                 let st = outline.last_stroke;
                 for &ch in possible_chords {
                     if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -250,6 +255,10 @@ impl PhoneticTheory {
         }
         for possible_chords in self.theory.vowel_matches(syllable) {
             for outline in possible_outlines.drain(..) {
+                if outline.skip > 0 {
+                    next_outlines.push(outline.decrement_skip());
+                    continue;
+                }
                 let st = outline.last_stroke;
                 for &ch in possible_chords {
                     if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -267,6 +276,10 @@ impl PhoneticTheory {
         }
         for possible_chords in self.theory.coda_matches(syllable) {
             for outline in possible_outlines.drain(..) {
+                if outline.skip > 0 {
+                    next_outlines.push(outline.decrement_skip());
+                    continue;
+                }
                 let st = outline.last_stroke;
                 for &ch in possible_chords {
                     if (st & ch).is_empty() & st.before_ignore_star(ch) {
@@ -289,6 +302,7 @@ impl PhoneticTheory {
 struct OutlineBuilder {
     last_stroke: Chord,
     rest: Option<Rc<OutlineBuilder>>,
+    skip: usize,
     len: usize,
 }
 
@@ -297,7 +311,24 @@ impl OutlineBuilder {
         OutlineBuilder {
             last_stroke: new_stroke,
             rest: self.rest.clone(),
+            skip: 0,
             len: self.len,
+        }
+    }
+
+    fn with_stroke_and_skip(&self, new_stroke: Chord, skip: usize) -> Self {
+        OutlineBuilder {
+            last_stroke: new_stroke,
+            rest: self.rest.clone(),
+            skip,
+            len: self.len,
+        }
+    }
+
+    fn decrement_skip(self) -> Self {
+        Self {
+            skip: self.skip - 1,
+            ..self
         }
     }
 
@@ -308,6 +339,7 @@ impl OutlineBuilder {
             OutlineBuilder {
                 last_stroke: Chord::empty(),
                 len: self.len + 1,
+                skip: 0,
                 rest: Some(Rc::new(self)),
             }
         }
@@ -331,6 +363,7 @@ impl Default for OutlineBuilder {
         Self {
             last_stroke: Chord::empty(),
             rest: None,
+            skip: 0,
             len: 1,
         }
     }
@@ -470,15 +503,21 @@ impl OutputRule {
 struct SyllableRule {
     prev: Option<Pronunciation>,
     next: Option<Pronunciation>,
+    take_next: Option<Pronunciation>,
     stress: Option<Stress>,
     chords: Rc<[Chord]>,
 }
 
 impl SyllableRule {
     fn matches(&self, syllable: Syllable<'_>) -> bool {
-        [Self::matches_stress, Self::matches_prev, Self::matches_next]
-            .into_iter()
-            .all(|f| f(self, syllable).unwrap_or(true))
+        [
+            Self::matches_stress,
+            Self::matches_prev,
+            Self::matches_next,
+            Self::matches_take_next,
+        ]
+        .into_iter()
+        .all(|f| f(self, syllable).unwrap_or(true))
     }
 
     fn matches_stress(&self, syllable: Syllable<'_>) -> Option<bool> {
@@ -495,6 +534,16 @@ impl SyllableRule {
         self.next
             .as_ref()
             .map(|p| syllable.word[syllable.end..].starts_with(p))
+    }
+
+    fn matches_take_next(&self, syllable: Syllable<'_>) -> Option<bool> {
+        self.take_next
+            .as_ref()
+            .map(|p| syllable.word[syllable.end..].starts_with(p))
+    }
+
+    fn chords_and_skip(&self) -> (&[Chord], usize) {
+        (&self.chords, self.take_next.as_ref().map_or(0, |s| s.len()))
     }
 }
 
@@ -523,15 +572,16 @@ impl Theory {
         }
     }
 
-    fn get_prefix(&self, syllable: Syllable) -> &[Chord] {
-        self.prefixes
-            .map
-            .get(syllable.as_slice())
+    fn get_prefix(&self, syllable: Syllable, skip: usize) -> (&[Chord], usize) {
+        syllable
+            .as_slice()
+            .get(skip..)
+            .and_then(|slice| self.prefixes.map.get(slice))
             .into_iter()
             .flat_map(|rules| &**rules)
             .find(|rule| rule.matches(syllable))
-            .map(|rule| &*rule.chords)
-            .unwrap_or(&[])
+            .map(SyllableRule::chords_and_skip)
+            .unwrap_or((&[], 0))
     }
 }
 
@@ -813,6 +863,8 @@ mod tests {
     #[test_case("young", "Y AH1 NG", "KWRUPBG" ; "young")]
     #[test_case("emulate", "EH1 M Y AH0 L EY2 T", "E/PHAOU/HRAEUT" ; "emulate")]
     #[test_case("marry", "M AE1 R IY0", "PHE/RAOE" ; "marry")]
+    #[test_case("expend", "IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
+    #[test_case("exchange", "IH0 K S CH EY2 N JH", "KPHAEUFPBG" ; "exchange")]
     fn word_to_outline(
         spelling: &str,
         pronunciation: &str,
