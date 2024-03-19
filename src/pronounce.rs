@@ -189,7 +189,7 @@ impl PhoneticTheory {
         pronunciation: &[Phoneme],
         _spelling: &str,
     ) -> anyhow::Result<Outline> {
-        let mut possible_outlines = vec![Node::default()];
+        let mut possible_outlines = vec![OutlineBuilder::default()];
         for syllable in self.phonology.syllabize_word(pronunciation)? {
             let mut next_outlines = Vec::new();
             for outline in &possible_outlines {
@@ -201,7 +201,7 @@ impl PhoneticTheory {
                 }
             }
             let res = self.strokes_for_syllable(syllable, &mut possible_outlines);
-            next_outlines.extend(possible_outlines.drain(..).map(Node::push_empty));
+            next_outlines.extend(possible_outlines.drain(..).map(OutlineBuilder::push_empty));
             if next_outlines.is_empty() {
                 res?;
             }
@@ -228,15 +228,15 @@ impl PhoneticTheory {
     fn strokes_for_syllable(
         &self,
         syllable: Syllable,
-        possible_outlines: &mut Vec<Node>,
+        possible_outlines: &mut Vec<OutlineBuilder>,
     ) -> anyhow::Result<()> {
         let mut next_outlines = Vec::new();
         for possible_chords in self.theory.onset_matches(syllable) {
-            for node in possible_outlines.drain(..) {
-                let st = node.last_stroke;
+            for outline in possible_outlines.drain(..) {
+                let st = outline.last_stroke;
                 for &ch in possible_chords {
                     if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                        next_outlines.push(node.with_stroke(st | ch))
+                        next_outlines.push(outline.with_stroke(st | ch))
                     }
                 }
             }
@@ -249,11 +249,11 @@ impl PhoneticTheory {
             ));
         }
         for possible_chords in self.theory.vowel_matches(syllable) {
-            for node in possible_outlines.drain(..) {
-                let st = node.last_stroke;
+            for outline in possible_outlines.drain(..) {
+                let st = outline.last_stroke;
                 for &ch in possible_chords {
                     if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                        next_outlines.push(node.with_stroke(st | ch))
+                        next_outlines.push(outline.with_stroke(st | ch))
                     }
                 }
             }
@@ -266,11 +266,11 @@ impl PhoneticTheory {
             ));
         }
         for possible_chords in self.theory.coda_matches(syllable) {
-            for node in possible_outlines.drain(..) {
-                let st = node.last_stroke;
+            for outline in possible_outlines.drain(..) {
+                let st = outline.last_stroke;
                 for &ch in possible_chords {
                     if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                        next_outlines.push(node.with_stroke(st | ch))
+                        next_outlines.push(outline.with_stroke(st | ch))
                     }
                 }
             }
@@ -286,15 +286,15 @@ impl PhoneticTheory {
     }
 }
 
-struct Node {
+struct OutlineBuilder {
     last_stroke: Chord,
-    rest: Option<Rc<Node>>,
+    rest: Option<Rc<OutlineBuilder>>,
     len: usize,
 }
 
-impl Node {
+impl OutlineBuilder {
     fn with_stroke(&self, new_stroke: Chord) -> Self {
-        Node {
+        OutlineBuilder {
             last_stroke: new_stroke,
             rest: self.rest.clone(),
             len: self.len,
@@ -305,7 +305,7 @@ impl Node {
         if self.last_stroke.is_empty() {
             self
         } else {
-            Node {
+            OutlineBuilder {
                 last_stroke: Chord::empty(),
                 len: self.len + 1,
                 rest: Some(Rc::new(self)),
@@ -314,19 +314,19 @@ impl Node {
     }
 }
 
-impl IntoIterator for Node {
-    type IntoIter = NodeIter;
+impl IntoIterator for OutlineBuilder {
+    type IntoIter = OutlineBuilderIter;
 
     type Item = Chord;
 
     fn into_iter(self) -> Self::IntoIter {
-        NodeIter {
-            node: Some(Rc::new(self)),
+        OutlineBuilderIter {
+            outline: Some(Rc::new(self)),
         }
     }
 }
 
-impl Default for Node {
+impl Default for OutlineBuilder {
     fn default() -> Self {
         Self {
             last_stroke: Chord::empty(),
@@ -336,17 +336,17 @@ impl Default for Node {
     }
 }
 
-struct NodeIter {
-    node: Option<Rc<Node>>,
+struct OutlineBuilderIter {
+    outline: Option<Rc<OutlineBuilder>>,
 }
 
-impl Iterator for NodeIter {
+impl Iterator for OutlineBuilderIter {
     type Item = Chord;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let node = self.node.take()?;
-        let item = node.last_stroke;
-        self.node = node.rest.clone();
+        let outline = self.outline.take()?;
+        let item = outline.last_stroke;
+        self.outline = outline.rest.clone();
         Some(item)
     }
 
@@ -356,9 +356,9 @@ impl Iterator for NodeIter {
     }
 }
 
-impl ExactSizeIterator for NodeIter {
+impl ExactSizeIterator for OutlineBuilderIter {
     fn len(&self) -> usize {
-        self.node.as_ref().map_or(0, |node| node.len)
+        self.outline.as_ref().map_or(0, |outline| outline.len)
     }
 }
 
