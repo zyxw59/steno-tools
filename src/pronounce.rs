@@ -192,16 +192,10 @@ impl PhoneticTheory {
         let mut possible_outlines = vec![OutlineBuilder::default()];
         for syllable in self.phonology.syllabize_word(pronunciation)? {
             let mut next_outlines = Vec::new();
-            for outline in &possible_outlines {
-                let st = outline.last_stroke;
-                let (chords, skip) = self.theory.get_prefix(syllable, outline.skip);
-                for &ch in chords {
-                    if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                        next_outlines.push(outline.with_stroke_and_skip(st | ch, skip))
-                    }
-                }
-            }
-            let res = self.strokes_for_syllable(syllable, &mut possible_outlines);
+            self.prefixes_for_syllable(syllable, &possible_outlines, &mut next_outlines);
+            self.suffixes_for_syllable(syllable, &possible_outlines, &mut next_outlines);
+
+            let res = self.write_outs_for_syllable(syllable, &mut possible_outlines);
             next_outlines.extend(possible_outlines.drain(..).map(OutlineBuilder::push_empty));
             if next_outlines.is_empty() {
                 res?;
@@ -226,13 +220,56 @@ impl PhoneticTheory {
         Ok(stroke_rev.into_iter().rev().join("/").into())
     }
 
-    fn strokes_for_syllable(
+    fn prefixes_for_syllable(
+        &self,
+        syllable: Syllable,
+        possible_outlines: &[OutlineBuilder],
+        next_outlines: &mut Vec<OutlineBuilder>,
+    ) {
+        for outline in possible_outlines {
+            let st = outline.last_stroke;
+            let (chords, skip) = self.theory.get_prefix(syllable, outline.skip);
+            for &ch in chords {
+                if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                    next_outlines.push(outline.with_stroke_and_skip(st | ch, skip))
+                }
+            }
+        }
+    }
+
+    fn suffixes_for_syllable(
+        &self,
+        syllable: Syllable,
+        possible_outlines: &[OutlineBuilder],
+        next_outlines: &mut Vec<OutlineBuilder>,
+    ) {
+        for mut outline in possible_outlines {
+            // skip over empty outlines
+            if outline.last_stroke.is_empty() {
+                if let Some(prev) = outline.rest.as_deref() {
+                    outline = prev;
+                } else {
+                    // if the only outline is empty, it means we're at the start of the word
+                    continue;
+                }
+            }
+            let st = outline.last_stroke;
+            let (chords, skip) = self.theory.get_suffix(syllable, outline.skip);
+            for &ch in chords {
+                if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                    next_outlines.push(outline.with_stroke(st | ch).push_empty_with_skip(skip));
+                }
+            }
+        }
+    }
+
+    fn write_outs_for_syllable(
         &self,
         syllable: Syllable,
         possible_outlines: &mut Vec<OutlineBuilder>,
     ) -> anyhow::Result<()> {
         let mut next_outlines = Vec::new();
-        for possible_chords in self.theory.onset_matches(syllable){
+        for possible_chords in self.theory.onset_matches(syllable) {
             for outline in possible_outlines.drain(..) {
                 if outline.skip > 0 {
                     next_outlines.push(outline.decrement_skip());
@@ -333,13 +370,20 @@ impl OutlineBuilder {
     }
 
     fn push_empty(self) -> Self {
+        self.push_empty_with_skip(0)
+    }
+
+    fn push_empty_with_skip(self, skip: usize) -> Self {
         if self.last_stroke.is_empty() {
-            self
+            Self {
+                skip: self.skip + skip,
+                ..self
+            }
         } else {
-            OutlineBuilder {
+            Self {
                 last_stroke: Chord::empty(),
                 len: self.len + 1,
-                skip: 0,
+                skip,
                 rest: Some(Rc::new(self)),
             }
         }
@@ -577,6 +621,18 @@ impl Theory {
             .as_slice()
             .get(skip..)
             .and_then(|slice| self.prefixes.map.get(slice))
+            .into_iter()
+            .flat_map(|rules| &**rules)
+            .find(|rule| rule.matches(syllable))
+            .map(SyllableRule::chords_and_skip)
+            .unwrap_or((&[], 0))
+    }
+
+    fn get_suffix(&self, syllable: Syllable, skip: usize) -> (&[Chord], usize) {
+        syllable
+            .as_slice()
+            .get(skip..)
+            .and_then(|slice| self.suffixes.map.get(slice))
             .into_iter()
             .flat_map(|rules| &**rules)
             .find(|rule| rule.matches(syllable))
@@ -865,6 +921,9 @@ mod tests {
     #[test_case("marry", "M AE1 R IY0", "PHE/RAOE" ; "marry")]
     #[test_case("expend", "IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
     #[test_case("exchange", "IH0 K S CH EY2 N JH", "KPHAEUFPBG" ; "exchange")]
+    #[test_case("action", "AE1 K SH AH0 N", "ABGS" ; "action")]
+    #[test_case("gumption", "G AH1 M P SH AH0 N", "TKPW*UPLGS" ; "gumption")]
+    #[test_case("conscious", "K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
     fn word_to_outline(
         spelling: &str,
         pronunciation: &str,

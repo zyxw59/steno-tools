@@ -139,6 +139,20 @@ theory:
       - take_next: "CH"
         stress: None
         chords: ["KPH"]
+    "K AA N":
+      - chords: ["K"]
+    "K AO N":
+      - chords: ["K"]
+  suffixes:
+    "SH AH N":
+      - prev: "K"
+        stress: None
+        chords: ["-S"]
+      - stress: None
+        chords: ["-GS"]
+    "SH AH S":
+      - stress: None
+        chords: ["-RBS"]
 
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
