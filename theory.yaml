@@ -119,8 +119,8 @@ theory:
     "NG G": ["-PBG"]
     "M P": ["*PL"]
     "L M": ["-PBL"]
-    "L P": ["-BL"]
-    "L B": ["-BL"]
+    "L P": ["-P"]
+
   prefixes:
     "IH K":
       - take_next: "S P"
