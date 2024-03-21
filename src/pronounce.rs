@@ -900,7 +900,7 @@ mod tests {
     #[test_case("EH P S AO L", &["EH P", "S AO L"] ; "vowel initial")]
     #[test_case("T AE L S P R AO T", &["T AE L", "S P R AO T"] ; "complex onset")]
     #[test_case("CH IH CH R EH K", &["CH IH CH", "R EH K"] ; "longer consonants")]
-    #[test_case("T EY IH S", &["T EY", "IH S"] ; "consecutive vowels")]
+    #[test_case("T EY IH S", &["T EY", "EY IH S"] ; "consecutive vowels as linkers")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
@@ -924,6 +924,7 @@ mod tests {
     #[test_case("action", "AE1 K SH AH0 N", "ABGS" ; "action")]
     #[test_case("gumption", "G AH1 M P SH AH0 N", "TKPW*UPLGS" ; "gumption")]
     #[test_case("conscious", "K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
+    #[test_case("drawing", "D R AO1 IH0 NG", "TKRO/WEUPBG" ; "drawing")]
     fn word_to_outline(
         spelling: &str,
         pronunciation: &str,

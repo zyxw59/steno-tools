@@ -83,6 +83,15 @@ theory:
     "Z": ["STK"]
     "ZH": ["SKH"]
     "HH W": ["WH"]
+    "AY": ["KWR"]
+    "EY": ["KWR"]
+    "IY": ["KWR"]
+    "OY": ["KWR"]
+    "AW": ["W"]
+    "OW": ["W"]
+    "UW": ["W"]
+    "AA": ["W"]
+    "AO": ["W"]
   codas:
     "B": ["-B"]
     "D": ["-D"]
@@ -156,7 +165,8 @@ theory:
 
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
-    "R", "S", "T", "CH", "V", "W", "Z", "DH", "SH", "ZH", "TH"]
+    "R", "S", "T", "CH", "V", "W", "Z", "DH", "SH", "ZH", "TH",
+    "AY", "EY", "IY", "OY", "AW", "OW", "UW", "AA", "AO"]
   onset_clusters:
     # Allow stop plus approximant other than 'j'.
     - first: ["P", "B", "K", "G"]
