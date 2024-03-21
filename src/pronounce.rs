@@ -23,7 +23,7 @@ pub struct Dictionary {
 }
 
 impl Dictionary {
-    pub fn load_csv(reader: impl BufRead) -> anyhow::Result<Self> {
+    pub fn load(reader: impl BufRead) -> anyhow::Result<Self> {
         let word_variant_pattern = regex::Regex::new(r"\([0-9]+\)$")?;
         let mut this = Self::default();
         for (idx, line) in reader.lines().enumerate() {

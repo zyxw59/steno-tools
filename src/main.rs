@@ -141,7 +141,7 @@ struct GenerateOutlines {
 impl GenerateOutlines {
     fn execute(&self) -> anyhow::Result<()> {
         let pronunciation_dict =
-            pronounce::Dictionary::load_csv(BufReader::new(File::open(&self.pronunciation_file)?))?;
+            pronounce::Dictionary::load(BufReader::new(File::open(&self.pronunciation_file)?))?;
         let theory: pronounce::PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
         let mut generated_dict = GeneratedDictionary::default();
