@@ -1,125 +1,191 @@
-vowels:
-  AH0: ["-"]
-  IH0: ["EU"]
-  EH0: ["E"]
-  AE0: ["A"]
-  AA0: ["O", "AU"]
-  AO0: ["O", "AU"]
-  UH0: ["U"]
-  AW0: ["OU"]
-  AY0: ["AOEU"]
-  EY0: ["AEU", "AE"]
-  IY0: ["AOE", "AE"]
-  OW0: ["OE", "AO"]
-  OY0: ["OEU"]
-  UW0: ["AOU"]
-  "Y UW0": ["AOU"]
-  ER0: ["-R"]
-  "ER0 F": ["*FRB"]
-  "ER0 V": ["-FRB"]
-  AH1: ["-"]
-  IH1: ["EU"]
-  EH1: ["E"]
-  AE1: ["A"]
-  AA1: ["O", "AU"]
-  AO1: ["O", "AU"]
-  UH1: ["U"]
-  AW1: ["OU"]
-  AY1: ["AOEU"]
-  EY1: ["AEU", "AE"]
-  IY1: ["AOE", "AE"]
-  OW1: ["OE", "AO"]
-  OY1: ["OEU"]
-  UW1: ["AOU"]
-  "Y UW1": ["AOU"]
-  ER1: ["-R"]
-  "ER1 F": ["*FRB"]
-  "ER1 V": ["-FRB"]
-  AH2: ["-"]
-  IH2: ["EU"]
-  EH2: ["E"]
-  AE2: ["A"]
-  AA2: ["O", "AU"]
-  AO2: ["O", "AU"]
-  UH2: ["U"]
-  AW2: ["OU"]
-  AY2: ["AOEU"]
-  EY2: ["AEU", "AE"]
-  IY2: ["AOE", "AE"]
-  OW2: ["OE", "AO"]
-  OY2: ["OEU"]
-  UW2: ["AOU"]
-  "Y UW2": ["AOU"]
-  ER2: ["-R"]
-  "ER2 F": ["*FRB"]
-  "ER2 V": ["-FRB"]
-onsets:
-  B: ["PW"]
-  CH: ["KH"]
-  D: ["TK"]
-  DH: ["TH"]
-  F: ["TP"]
-  G: ["TKPW"]
-  HH: ["H"]
-  JH: ["SKWR"]
-  K: ["K"]
-  L: ["HR"]
-  M: ["PH"]
-  N: ["TPH"]
-  P: ["P"]
-  R: ["R"]
-  S: ["S"]
-  SH: ["SH"]
-  T: ["T"]
-  TH: ["TH"]
-  V: ["SPW"]
-  W: ["W"]
-  Y: ["KWR", "AOU"]
-  Z: ["STK"]
-  ZH: ["SKWR"]
-  "K S": ["KP"]
-  "AH0 K S": ["KP"]
-  "EH0 K S": ["KP"]
-  "IH0 K S": ["KP"]
-  "AH0 K S P": ["KP"]
-  "EH0 K S P": ["KP"]
-  "IH0 K S P": ["KP"]
-  "AH0 K S T": ["TKP"]
-  "EH0 K S T": ["TKP"]
-  "IH0 K S T": ["TKP"]
-codas:
-  B: ["-B"]
-  CH: ["-FP"]
-  D: ["-D"]
-  DH: ["*T"]
-  F: ["-F"]
-  G: ["-G"]
-  JH: ["-PBLG"]
-  K: ["-BG"]
-  L: ["-L"]
-  M: ["-PL"]
-  N: ["-PB"]
-  NG: ["-PBG"]
-  P: ["-P"]
-  R: ["-R"]
-  S: ["-S"]
-  SH: ["-RB"]
-  T: ["-T"]
-  TH: ["*T"]
-  V: ["-F", "*F"]
-  Z: ["-Z", "-S"]
-  ZH: ["-PBLG"]
-  "L CH": ["-LG"]
-  "L JH": ["-LG"]
-  "L K": ["*LG"]
-  "M P": ["*PL"]
-  "N CH": ["-FRPB"]
-  "N JH": ["-PBG"]
-  "NG K": ["*PBG"]
-  "S T": ["-FT", "*S"]
-  "R CH": ["-FRPB"]
-  "R F": ["*FRB"]
-  "R V": ["-FRB"]
-  "SH AH0 N": ["-GS"]
-  "K SH AH0 N": ["-BGS"]
-  "ER0": ["-R"]
+theory:
+  vowels:
+    "AH":
+      - prev: "Y"
+        stress: None
+        chords: ["AOU"]
+      - chords: ["U"]
+    "AA":
+      - next: "L"
+        chords: ["AU"]
+      - next: "R"
+        chords: ["A"]
+      - chords: ["O"]
+    "AO":
+      - next: "L"
+        chords: ["AU"]
+      - chords: ["O"]
+    "AE":
+      - next_broad: "R"
+        chords: ["E"]
+      - chords: ["A"]
+    "IH": ["EU"]
+    "EH": ["E"]
+    "ER":
+      - prev: "Y"
+        stress: None
+        chords: ["AOUR"]
+      - chords: ["UR"]
+    "UH":
+      - prev: "Y"
+        chords: ["AOU"]
+      - chords: ["AO"]
+    "IY": ["AOE"]
+    "EY":
+      - next_broad: "R"
+        chords: ["E"]
+      - chords: ["AEU"]
+    "AY": ["AOEU"]
+    "OY": ["OEU"]
+    "AW": ["OU"]
+    "OW":
+      - next: "L"
+        chords: ["O"]
+      - chords: ["OE"]
+    "UW":
+      - prev: "Y"
+        chords: ["AOU"]
+      - chords: ["AO"]
+
+  onsets:
+    "B": ["PW"]
+    "CH": ["KH"]
+    "D": ["TK"]
+    "DH": ["TH"]
+    "F": ["TP"]
+    "G": ["TKPW"]
+    "HH": ["H"]
+    "JH": ["SKWR"]
+    "K": ["K"]
+    "L": ["HR"]
+    "M": ["PH"]
+    "N": ["TPH"]
+    "P": ["P"]
+    "R": ["R"]
+    "S": ["S"]
+    "SH": ["SH"]
+    "T": ["T"]
+    "TH": ["TH"]
+    "V": ["SPW"]
+    "W": ["W"]
+    "Y":
+      - next: "AH"
+        stress: None
+        chords: [""]
+      - next: "ER"
+        stress: None
+        chords: [""]
+      - next: "UH"
+        chords: [""]
+      - next: "UW"
+        chords: [""]
+      - chords: ["KWR"]
+    "Z": ["STK"]
+    "ZH": ["SKH"]
+    "HH W": ["WH"]
+    "AY": ["KWR"]
+    "EY": ["KWR"]
+    "IY": ["KWR"]
+    "OY": ["KWR"]
+    "AW": ["W"]
+    "OW": ["W"]
+    "UW": ["W"]
+    "AA": ["W"]
+    "AO": ["W"]
+  codas:
+    "B": ["-B"]
+    "D": ["-D"]
+    "JH": ["-PBLG"]
+    "F": ["-F"]
+    "G": ["-G"]
+    "K": ["-BG"]
+    "L": ["-L"]
+    "M": ["-PL"]
+    "N": ["-PB"]
+    "P": ["-P"]
+    "R": ["-R"]
+    "S": ["-S", "-F"]
+    "T": ["-T"]
+    "CH": ["-FP"]
+    "V": ["-F"]
+    "Z": ["-Z", "-F"]
+    "DH": ["*T"]
+    "SH": ["-RB"]
+    "ZH": ["-PBLG"]
+    "TH": ["*T"]
+    "R CH": ["-FRPB"]
+    "N CH": ["-FRPB"]
+    "N JH": ["-FPBG"]
+    "L CH": ["-LG"]
+    "L JH": ["-LG"]
+    "L F": ["-FL"]
+    "L V": ["-FL"]
+    "R V": ["-FRB"]
+    "S T": ["-FT", "*S"]
+    "NG": ["-PBG"]
+    "N K": ["-PBG"]
+    "NG K": ["-PBG"]
+    "NG G": ["-PBG"]
+    "M P": ["*PL"]
+    "L M": ["-PBL"]
+    "L P": ["-P"]
+
+  prefixes:
+    "IH K":
+      - take_next: "S P"
+        stress: None
+        chords: ["KP"]
+      - take_next: "S K"
+        stress: None
+        chords: ["KP"]
+      - take_next: "S T"
+        stress: None
+        chords: ["KP"]
+      - take_next: "S"
+        stress: None
+        chords: ["KP"]
+    "IH K S":
+      - take_next: "CH"
+        stress: None
+        chords: ["KPH"]
+    "K AA N":
+      - chords: ["K"]
+    "K AO N":
+      - chords: ["K"]
+  suffixes:
+    "SH AH N":
+      - prev: "K"
+        stress: None
+        chords: ["-S"]
+      - stress: None
+        chords: ["-GS"]
+    "SH AH S":
+      - stress: None
+        chords: ["-RBS"]
+
+phonology:
+  onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
+    "R", "S", "T", "CH", "V", "W", "Z", "DH", "SH", "ZH", "TH",
+    "AY", "EY", "IY", "OY", "AW", "OW", "UW", "AA", "AO"]
+  onset_clusters:
+    # Allow stop plus approximant other than 'j'.
+    - first: ["P", "B", "K", "G"]
+      second: ["L"]
+    - first: ["P", "B", "T", "D", "K", "G"]
+      second: ["R", "W"]
+    # Allow voicless fricative, 'z', or 'v' plus approximant other than 'j'.
+    - first: ["F", "S", "Z", "TH", "SH"]
+      second: ["L"]
+    - first: ["F", "TH", "SH", "V"]
+      second: ["R"]
+    - first: ["S", "Z", "TH", "HH", "V"]
+      second: ["W"]
+    # Allow 's' plus voicless stop, nasal, or voicless fricative
+    - first: ["S"]
+      second: ["P", "T", "K", "M", "N", "F", "TH"]
+    # Allow any consonant other than 'r' or 'w' followed by 'j'
+    - first: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
+      "S", "T", "CH", "V", "Z", "DH", "SH", "ZH", "TH"]
+      second: ["Y"]
+  vowels: ["AH", "AA", "AO", "AE", "IH", "EH", "UH", "IY", "EY", "AY", "OY",
+    "AW", "OW", "UW", "ER"]

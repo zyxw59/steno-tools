@@ -3,7 +3,7 @@ use std::{fmt, str::FromStr};
 use serde::{Deserialize, Serialize};
 
 bitflags::bitflags! {
-    #[derive(Clone, Copy, Eq, PartialEq)]
+    #[derive(Clone, Copy, Default, Eq, PartialEq)]
     pub struct Chord: u32 {
         const NUMBER  = 1 << 0;
         const CARET   = 1 << 1;
@@ -86,16 +86,10 @@ impl Chord {
         self.highest_flag_index() < other.lowest_flag_index()
     }
 
-    /// Returns whether the two chords conflict (have overlapping ranges in steno order). '*' is
-    /// ignored for determining ranges, but if both chords contain '*', they do conflict.
-    pub fn conflicts(self, other: Chord) -> bool {
-        if (self & other).is_empty() {
-            let this = self & !Self::STAR;
-            let other = other & !Self::STAR;
-            !(this.before(other) || other.before(this))
-        } else {
-            true
-        }
+    /// Returns whether this chord is entirely before the other chord in steno order, ignoring
+    /// star.
+    pub fn before_ignore_star(self, other: Chord) -> bool {
+        (self & !Chord::STAR).highest_flag_index() < (other & !Chord::STAR).lowest_flag_index()
     }
 
     fn highest_flag_index(self) -> i32 {
@@ -272,16 +266,19 @@ mod tests {
     }
 
     #[test_case("ST", "-TS", true, false ; "before")]
-    #[test_case("SH", "KWR", false, true ; "overlap")]
-    #[test_case("-FR", "*T", false, false ; "ignore star")]
-    #[test_case("*FR", "*T", false, true ; "star conflicts")]
-    fn compare_chords(left: &str, right: &str, before: bool, conflicts: bool) -> anyhow::Result<()> {
+    #[test_case("SH", "KWR", false, false ; "overlap")]
+    #[test_case("-FR", "*T", true, false ; "ignore star")]
+    #[test_case("*FR", "*T", true, true ; "star conflicts")]
+    fn compare_chords(
+        left: &str,
+        right: &str,
+        before: bool,
+        conflicts: bool,
+    ) -> anyhow::Result<()> {
         let left: Chord = left.parse()?;
         let right: Chord = right.parse()?;
-        println!("{left:#}: {:08x}", left.bits());
-        println!("{right:#}: {:08x}", right.bits());
-        assert_eq!(left.before(right), before);
-        assert_eq!(left.conflicts(right), conflicts);
+        assert_eq!(left.before_ignore_star(right), before);
+        assert_eq!(!(left & right).is_empty(), conflicts);
         Ok(())
     }
 }

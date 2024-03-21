@@ -1,10 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::File,
     io::{self, BufRead, BufReader, BufWriter},
     path::PathBuf,
 };
-use serde::{Deserialize, Serialize};
 
 use clap::Parser;
 use serde_json::from_reader;
@@ -140,9 +140,9 @@ struct GenerateOutlines {
 
 impl GenerateOutlines {
     fn execute(&self) -> anyhow::Result<()> {
-        let pronunciation_dict: pronounce::Dictionary =
-            from_reader(BufReader::new(File::open(&self.pronunciation_file)?))?;
-        let theory: pronounce::Theory =
+        let pronunciation_dict =
+            pronounce::Dictionary::load(BufReader::new(File::open(&self.pronunciation_file)?))?;
+        let theory: pronounce::PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
         let mut generated_dict = GeneratedDictionary::default();
         let words = BufReader::new(File::open(&self.wordlist)?)
@@ -155,17 +155,25 @@ impl GenerateOutlines {
                 generated_dict.no_pronunciation.push(word.clone())
             }
             for pron in prons {
-                if let Some(outline) = theory.get_outline(pron) {
-                    if let Err(conflict) = generated_dict
-                        .valid_outlines
-                        .insert(word.clone(), outline.clone())
-                    {
-                        let conflict_entry = generated_dict.conflicts.entry(outline).or_default();
-                        conflict_entry.insert(conflict);
-                        conflict_entry.insert(word.clone());
+                match theory.get_outline(pron, &word) {
+                    Ok(outline) => {
+                        if let Err(conflict) = generated_dict
+                            .valid_outlines
+                            .insert(word.clone(), outline.clone())
+                        {
+                            let conflict_entry =
+                                generated_dict.conflicts.entry(outline).or_default();
+                            conflict_entry.insert(conflict);
+                            conflict_entry.insert(word.clone());
+                        }
                     }
-                } else {
-                    generated_dict.no_outlines.push((word.clone(), pron.clone()));
+                    Err(error) => {
+                        generated_dict.no_outlines.push(NoOutline {
+                            word: word.clone(),
+                            pronunciation: pron.clone(),
+                            error,
+                        });
+                    }
                 }
             }
         }
@@ -186,5 +194,30 @@ pub struct GeneratedDictionary {
     pub valid_outlines: Dictionary,
     pub conflicts: BTreeMap<Outline, BTreeSet<Word>>,
     pub no_pronunciation: Vec<Word>,
-    pub no_outlines: Vec<(Word, Pronunciation)>,
+    pub no_outlines: Vec<NoOutline>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct NoOutline {
+    word: Word,
+    pronunciation: Pronunciation,
+    #[serde(
+        serialize_with = "serialize_anyhow",
+        deserialize_with = "deserialize_anyhow"
+    )]
+    error: anyhow::Error,
+}
+
+fn serialize_anyhow<S>(error: &anyhow::Error, ser: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    error.to_string().serialize(ser)
+}
+
+fn deserialize_anyhow<'de, D>(de: D) -> Result<anyhow::Error, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    String::deserialize(de).map(anyhow::Error::msg)
 }

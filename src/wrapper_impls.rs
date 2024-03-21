@@ -11,7 +11,7 @@ macro_rules! fmt_impls {
                 ::std::fmt::Debug::fmt(&self.0, f)
             }
         }
-    }
+    };
 }
 
 #[macro_export]
@@ -29,5 +29,5 @@ macro_rules! deref_impls {
                 &self.0
             }
         }
-    }
+    };
 }
