@@ -265,22 +265,20 @@ mod tests {
         assert_eq!(actual, expected);
     }
 
-    // #[test_case("ST", "-TS", true, false ; "before")]
-    // #[test_case("SH", "KWR", false, true ; "overlap")]
-    // #[test_case("-FR", "*T", false, false ; "ignore star")]
-    // #[test_case("*FR", "*T", false, true ; "star conflicts")]
-    // fn compare_chords(
-    //     left: &str,
-    //     right: &str,
-    //     before: bool,
-    //     conflicts: bool,
-    // ) -> anyhow::Result<()> {
-    //     let left: Chord = left.parse()?;
-    //     let right: Chord = right.parse()?;
-    //     println!("{left:#}: {:08x}", left.bits());
-    //     println!("{right:#}: {:08x}", right.bits());
-    //     assert_eq!(left.before(right), before);
-    //     assert_eq!(left.conflicts(right), conflicts);
-    //     Ok(())
-    // }
+    #[test_case("ST", "-TS", true, false ; "before")]
+    #[test_case("SH", "KWR", false, false ; "overlap")]
+    #[test_case("-FR", "*T", true, false ; "ignore star")]
+    #[test_case("*FR", "*T", true, true ; "star conflicts")]
+    fn compare_chords(
+        left: &str,
+        right: &str,
+        before: bool,
+        conflicts: bool,
+    ) -> anyhow::Result<()> {
+        let left: Chord = left.parse()?;
+        let right: Chord = right.parse()?;
+        assert_eq!(left.before_ignore_star(right), before);
+        assert_eq!(!(left & right).is_empty(), conflicts);
+        Ok(())
+    }
 }
