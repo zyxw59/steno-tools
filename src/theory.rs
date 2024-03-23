@@ -20,11 +20,7 @@ pub struct PhoneticTheory {
 }
 
 impl PhoneticTheory {
-    pub fn get_outline(
-        &self,
-        pronunciation: &[Phoneme],
-        _spelling: &str,
-    ) -> anyhow::Result<Outline> {
+    fn get_outlines(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Vec<OutlineBuilder>> {
         let mut possible_outlines = vec![OutlineBuilder::default()];
         for syllable in self.phonology.syllabize_word(pronunciation)? {
             let mut next_outlines = Vec::new();
@@ -40,21 +36,21 @@ impl PhoneticTheory {
         }
         // if an outline has a non-empty last_stroke, that means it ends in a prefix, which is not
         // valid; skip those outlines
-        let outline = possible_outlines
+        possible_outlines.retain(|outline| outline.last_stroke.is_empty());
+        Ok(possible_outlines)
+    }
+
+    pub fn get_outline(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Outline> {
+        self.get_outlines(pronunciation)?
             .into_iter()
-            .find(|outline| outline.last_stroke.is_empty())
+            .next()
             .ok_or_else(|| {
                 anyhow::anyhow!(
                     "no outlines found for word {}",
                     PronunciationSlice(pronunciation)
                 )
-            })?;
-        let mut stroke_iter = outline.into_iter();
-        // skip empty stroke
-        stroke_iter.next();
-        let mut stroke_rev = stroke_iter.collect::<Vec<Chord>>();
-        stroke_rev.reverse();
-        Ok(stroke_rev.into())
+            })
+            .map(From::from)
     }
 
     fn prefixes_for_syllable(
@@ -224,6 +220,17 @@ impl OutlineBuilder {
                 rest: Some(Rc::new(self)),
             }
         }
+    }
+}
+
+impl From<OutlineBuilder> for Outline {
+    fn from(builder: OutlineBuilder) -> Outline {
+        let mut strokes = builder
+            .into_iter()
+            .filter(|stroke| !stroke.is_empty())
+            .collect::<Vec<Chord>>();
+        strokes.reverse();
+        strokes.into()
     }
 }
 
@@ -745,26 +752,22 @@ mod tests {
         Ok(())
     }
 
-    #[test_case("a", "EY1", "AEU" ; "a")]
-    #[test_case("all", "AO1 L", "AUL" ; "all")]
-    #[test_case("young", "Y AH1 NG", "KWRUPBG" ; "young")]
-    #[test_case("emulate", "EH1 M Y AH0 L EY2 T", "E/PHAOU/HRAEUT" ; "emulate")]
-    #[test_case("marry", "M AE1 R IY0", "PHE/RAOE" ; "marry")]
-    #[test_case("expend", "IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
-    #[test_case("exchange", "IH0 K S CH EY2 N JH", "KPHAEUFPBG" ; "exchange")]
-    #[test_case("action", "AE1 K SH AH0 N", "ABGS" ; "action")]
-    #[test_case("gumption", "G AH1 M P SH AH0 N", "TKPW*UPLGS" ; "gumption")]
-    #[test_case("conscious", "K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
-    #[test_case("drawing", "D R AO1 IH0 NG", "TKRO/WEUPBG" ; "drawing")]
-    fn word_to_outline(
-        spelling: &str,
-        pronunciation: &str,
-        expected_outline: &str,
-    ) -> anyhow::Result<()> {
+    #[test_case("EY1", "AEU" ; "a")]
+    #[test_case("AO1 L", "AUL" ; "all")]
+    #[test_case("Y AH1 NG", "KWRUPBG" ; "young")]
+    #[test_case("EH1 M Y AH0 L EY2 T", "E/PHAOU/HRAEUT" ; "emulate")]
+    #[test_case("M AE1 R IY0", "PHE/RAOE" ; "marry")]
+    #[test_case("IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
+    #[test_case("IH0 K S CH EY2 N JH", "KPHAEUFPBG" ; "exchange")]
+    #[test_case("AE1 K SH AH0 N", "ABGS" ; "action")]
+    #[test_case("G AH1 M P SH AH0 N", "TKPW*UPLGS" ; "gumption")]
+    #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
+    #[test_case("D R AO1 IH0 NG", "TKRO/WEUPBG" ; "drawing")]
+    fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
-        let actual_outline = theory.get_outline(&Pronunciation::from(pronunciation), spelling)?;
+        let actual_outline = theory.get_outline(&Pronunciation::from(pronunciation))?;
         assert_eq!(actual_outline, expected_outline);
         Ok(())
     }

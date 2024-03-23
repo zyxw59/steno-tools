@@ -156,7 +156,7 @@ impl GenerateOutlines {
                 generated_dict.no_pronunciation.push(word.clone())
             }
             for pron in prons {
-                match theory.get_outline(pron, &word) {
+                match theory.get_outline(pron) {
                     Ok(outline) => {
                         generated_dict.insert(outline, word.clone(), pron.clone());
                     }
