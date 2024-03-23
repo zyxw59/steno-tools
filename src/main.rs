@@ -12,6 +12,7 @@ mod chord;
 mod dictionary;
 mod generated;
 mod pronounce;
+mod theory;
 mod wrapper_impls;
 
 use dictionary::{Dictionary, Word};
@@ -142,7 +143,7 @@ impl GenerateOutlines {
     fn execute(&self) -> anyhow::Result<()> {
         let pronunciation_dict =
             pronounce::Dictionary::load(BufReader::new(File::open(&self.pronunciation_file)?))?;
-        let theory: pronounce::PhoneticTheory =
+        let theory: theory::PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
         let mut generated_dict = GeneratedDictionary::default();
         let words = BufReader::new(File::open(&self.wordlist)?)
