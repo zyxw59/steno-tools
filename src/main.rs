@@ -1,4 +1,3 @@
-use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::File,
@@ -11,11 +10,12 @@ use serde_json::from_reader;
 
 mod chord;
 mod dictionary;
+mod generated;
 mod pronounce;
 mod wrapper_impls;
 
-use dictionary::{Dictionary, Outline, Word};
-use pronounce::Pronunciation;
+use dictionary::{Dictionary, Word};
+use generated::{GeneratedDictionary, NoOutline};
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -157,15 +157,7 @@ impl GenerateOutlines {
             for pron in prons {
                 match theory.get_outline(pron, &word) {
                     Ok(outline) => {
-                        if let Err(conflict) = generated_dict
-                            .valid_outlines
-                            .insert(word.clone(), outline.clone())
-                        {
-                            let conflict_entry =
-                                generated_dict.conflicts.entry(outline).or_default();
-                            conflict_entry.insert(conflict);
-                            conflict_entry.insert(word.clone());
-                        }
+                        generated_dict.insert(outline, word.clone(), pron.clone());
                     }
                     Err(error) => {
                         generated_dict.no_outlines.push(NoOutline {
@@ -177,9 +169,6 @@ impl GenerateOutlines {
                 }
             }
         }
-        for outline in generated_dict.conflicts.keys() {
-            generated_dict.valid_outlines.remove_outline(outline);
-        }
         if let Some(out_path) = &self.out_file {
             serde_json::to_writer_pretty(BufWriter::new(File::create(out_path)?), &generated_dict)?;
         } else {
@@ -187,37 +176,4 @@ impl GenerateOutlines {
         }
         Ok(())
     }
-}
-
-#[derive(Default, Debug, Deserialize, Serialize)]
-pub struct GeneratedDictionary {
-    pub valid_outlines: Dictionary,
-    pub conflicts: BTreeMap<Outline, BTreeSet<Word>>,
-    pub no_pronunciation: Vec<Word>,
-    pub no_outlines: Vec<NoOutline>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct NoOutline {
-    word: Word,
-    pronunciation: Pronunciation,
-    #[serde(
-        serialize_with = "serialize_anyhow",
-        deserialize_with = "deserialize_anyhow"
-    )]
-    error: anyhow::Error,
-}
-
-fn serialize_anyhow<S>(error: &anyhow::Error, ser: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    error.to_string().serialize(ser)
-}
-
-fn deserialize_anyhow<'de, D>(de: D) -> Result<anyhow::Error, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    String::deserialize(de).map(anyhow::Error::msg)
 }
