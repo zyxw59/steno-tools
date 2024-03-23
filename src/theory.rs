@@ -53,6 +53,37 @@ impl PhoneticTheory {
             .map(From::from)
     }
 
+    pub fn disambiguate_phonetic(
+        &self,
+        outline: Outline,
+        pron_1: &[Phoneme],
+        pron_2: &[Phoneme],
+    ) -> Option<(Outline, Outline)> {
+        let outlines_1 = self.get_outlines(pron_1).ok()?;
+        let outlines_2 = self.get_outlines(pron_2).ok()?;
+        let mut candidate_1 = outline.clone();
+        let mut candidate_2 = outline.clone();
+        for item in outlines_1.into_iter().zip_longest(outlines_2) {
+            use itertools::EitherOrBoth;
+            match item {
+                EitherOrBoth::Both(left, right) => {
+                    candidate_1 = left.into();
+                    candidate_2 = right.into();
+                }
+                EitherOrBoth::Left(left) => {
+                    candidate_1 = left.into();
+                }
+                EitherOrBoth::Right(right) => {
+                    candidate_2 = right.into();
+                }
+            }
+            if candidate_1 != candidate_2 {
+                return Some((candidate_1, candidate_2));
+            }
+        }
+        None
+    }
+
     fn prefixes_for_syllable(
         &self,
         syllable: Syllable,

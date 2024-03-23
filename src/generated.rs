@@ -2,7 +2,7 @@ use std::collections::{btree_map::Entry, BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{chord::Outline, dictionary::Word, pronounce::Pronunciation};
+use crate::{chord::Outline, dictionary::Word, pronounce::Pronunciation, theory::PhoneticTheory};
 
 #[derive(Default, Debug, Serialize)]
 pub struct GeneratedDictionary {
@@ -27,6 +27,38 @@ impl GeneratedDictionary {
                     conflicts_entry.insert([old_entry, new_entry].into_iter().collect());
                 }
             }
+        }
+    }
+
+    pub fn resolve_phonetic_conflicts(&mut self, theory: &PhoneticTheory) {
+        let mut insertions = BTreeMap::new();
+        let mut removals = BTreeSet::new();
+        for (outline, conflicts) in &self.conflicts {
+            if conflicts.len() != 2 {
+                continue;
+            }
+            // since there's exactly two we can just take first and last
+            let entry_1 = conflicts.first().unwrap();
+            let entry_2 = conflicts.last().unwrap();
+            if entry_1.pronunciation == entry_2.pronunciation {
+                continue;
+            }
+            let Some((outline_1, outline_2)) = theory.disambiguate_phonetic(
+                outline.clone(),
+                &entry_1.pronunciation,
+                &entry_2.pronunciation,
+            ) else {
+                continue;
+            };
+            removals.insert(outline.clone());
+            insertions.insert(outline_1, entry_1.clone());
+            insertions.insert(outline_2, entry_1.clone());
+        }
+        for outline in removals {
+            self.conflicts.remove(&outline);
+        }
+        for (outline, entry) in insertions {
+            self.insert(outline, entry.word, entry.pronunciation);
         }
     }
 }

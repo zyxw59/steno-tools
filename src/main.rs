@@ -170,6 +170,7 @@ impl GenerateOutlines {
                 }
             }
         }
+        generated_dict.resolve_phonetic_conflicts(&theory);
         if let Some(out_path) = &self.out_file {
             serde_json::to_writer_pretty(BufWriter::new(File::create(out_path)?), &generated_dict)?;
         } else {

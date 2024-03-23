@@ -80,7 +80,7 @@ theory:
       - next: "UW"
         chords: [""]
       - chords: ["KWR"]
-    "Z": ["STK"]
+    "Z": ["STK", "S*"]
     "ZH": ["SKH"]
     "HH W": ["WH"]
     "AY": ["KWR"]
@@ -105,11 +105,11 @@ theory:
     "N": ["-PB"]
     "P": ["-P"]
     "R": ["-R"]
-    "S": ["-S", "-F"]
+    "S": ["-S", "-F", "*F"]
     "T": ["-T"]
     "CH": ["-FP"]
-    "V": ["-F"]
-    "Z": ["-Z", "-F"]
+    "V": ["-F", "-FB"]
+    "Z": ["-Z", "-F", "*F"]
     "DH": ["*T"]
     "SH": ["-RB"]
     "ZH": ["-PBLG"]
@@ -129,7 +129,7 @@ theory:
     "NG G": ["-PBG"]
     "M P": ["*PL"]
     "L M": ["-PBL"]
-    "L P": ["-P"]
+    "L P": ["-P", "-PL"]
 
   prefixes:
     "IH K":
@@ -157,12 +157,12 @@ theory:
     "SH AH N":
       - prev: "K"
         stress: None
-        chords: ["-S"]
+        chords: ["-S", "*S"]
       - stress: None
-        chords: ["-GS"]
+        chords: ["-GS", "*GS"]
     "SH AH S":
       - stress: None
-        chords: ["-RBS"]
+        chords: ["-RBS", "*RBS"]
 
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
