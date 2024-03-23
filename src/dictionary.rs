@@ -5,6 +5,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use crate::chord::Outline;
+
 #[derive(Default, Debug, Serialize)]
 pub struct Dictionary {
     #[serde(flatten)]
@@ -35,18 +37,6 @@ impl<'de> Deserialize<'de> for Dictionary {
             entry.or_default().insert(outline.clone());
         }
         Ok(Self { outlines, words })
-    }
-}
-
-#[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
-#[serde(transparent)]
-pub struct Outline(Rc<str>);
-crate::fmt_impls!(Outline);
-crate::deref_impls!(Outline as str);
-
-impl<T: Into<Rc<str>>> From<T> for Outline {
-    fn from(s: T) -> Self {
-        Self(s.into())
     }
 }
 

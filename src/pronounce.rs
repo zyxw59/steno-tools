@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 
 use crate::{
-    chord::Chord,
-    dictionary::{Outline, Word},
+    chord::{Chord, Outline},
+    dictionary::Word,
 };
 
 #[derive(Default, Debug, Clone, Deserialize)]
@@ -216,8 +216,9 @@ impl PhoneticTheory {
         let mut stroke_iter = outline.into_iter();
         // skip empty stroke
         stroke_iter.next();
-        let stroke_rev = stroke_iter.collect::<Vec<Chord>>();
-        Ok(stroke_rev.into_iter().rev().join("/").into())
+        let mut stroke_rev = stroke_iter.collect::<Vec<Chord>>();
+        stroke_rev.reverse();
+        Ok(stroke_rev.into())
     }
 
     fn prefixes_for_syllable(
@@ -888,6 +889,7 @@ mod tests {
     use test_case::test_case;
 
     use super::{PhoneticTheory, Pronunciation};
+    use crate::chord::Outline;
 
     #[test]
     fn load_theory() -> anyhow::Result<()> {
@@ -930,10 +932,11 @@ mod tests {
         pronunciation: &str,
         expected_outline: &str,
     ) -> anyhow::Result<()> {
+        let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
         let actual_outline = theory.get_outline(&Pronunciation::from(pronunciation), spelling)?;
-        assert_eq!(&*actual_outline, expected_outline);
+        assert_eq!(actual_outline, expected_outline);
         Ok(())
     }
 }

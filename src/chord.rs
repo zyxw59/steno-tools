@@ -1,9 +1,9 @@
-use std::{fmt, str::FromStr};
+use std::{fmt, rc::Rc, str::FromStr};
 
 use serde::{Deserialize, Serialize};
 
 bitflags::bitflags! {
-    #[derive(Clone, Copy, Default, Eq, PartialEq)]
+    #[derive(Clone, Copy, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
     pub struct Chord: u32 {
         const NUMBER  = 1 << 0;
         const CARET   = 1 << 1;
@@ -235,7 +235,92 @@ impl Serialize for Chord {
     where
         S: serde::Serializer,
     {
-        se.serialize_str(&format!("{self}"))
+        se.serialize_str(&self.to_string())
+    }
+}
+
+#[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd)]
+pub struct Outline(Rc<[Chord]>);
+crate::deref_impls!(Outline as [Chord]);
+
+impl fmt::Debug for Outline {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some((first, rest)) = self.0.split_first() {
+            fmt::Debug::fmt(first, f)?;
+            for chord in rest {
+                f.write_str("/")?;
+                fmt::Debug::fmt(chord, f)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for Outline {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(self, f)
+    }
+}
+
+impl FromStr for Outline {
+    type Err = <Chord as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.split('/').map(Chord::from_str).collect()
+    }
+}
+
+impl FromIterator<Chord> for Outline {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = Chord>,
+    {
+        Self(iter.into_iter().collect())
+    }
+}
+
+impl<T> From<T> for Outline where Rc<[Chord]>: From<T> {
+    fn from(val: T) -> Self {
+        Self(val.into())
+    }
+}
+
+impl Serialize for Outline {
+    fn serialize<S>(&self, se: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        se.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for Outline {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::{Error, Unexpected};
+        struct Visitor;
+
+        const EXPECTED: &str = "a sequence of steno strokes separated by slashes";
+
+        impl<'de> serde::de::Visitor<'de> for Visitor {
+            type Value = Outline;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("a string representing steno notation")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: Error,
+            {
+                v.parse::<Outline>()
+                    .map_err(|err| E::invalid_value(Unexpected::Char(err.char()), &EXPECTED))
+            }
+        }
+
+        de.deserialize_str(Visitor)
     }
 }
 
