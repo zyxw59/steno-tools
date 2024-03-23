@@ -87,6 +87,7 @@ theory:
     "EY": ["KWR"]
     "IY": ["KWR"]
     "OY": ["KWR"]
+    "IH": ["KWR"]
     "AW": ["W"]
     "OW": ["W"]
     "UW": ["W"]
@@ -166,7 +167,7 @@ theory:
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
     "R", "S", "T", "CH", "V", "W", "Z", "DH", "SH", "ZH", "TH",
-    "AY", "EY", "IY", "OY", "AW", "OW", "UW", "AA", "AO"]
+    "AY", "EY", "IY", "OY", "AW", "OW", "UW", "AA", "AO", "IH"]
   onset_clusters:
     # Allow stop plus approximant other than 'j'.
     - first: ["P", "B", "K", "G"]
