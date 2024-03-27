@@ -50,9 +50,14 @@ impl GeneratedDictionary {
             ) else {
                 continue;
             };
-            removals.insert(outline.clone());
-            insertions.insert(outline_1, entry_1.clone());
-            insertions.insert(outline_2, entry_1.clone());
+            // don't add this disambiguation if it would conflict with a different entry
+            if !self.valid_outlines.outlines.contains_key(&outline_1)
+                && !self.valid_outlines.outlines.contains_key(&outline_2)
+            {
+                removals.insert(outline.clone());
+                insertions.insert(outline_1, entry_1.clone());
+                insertions.insert(outline_2, entry_2.clone());
+            }
         }
         for outline in removals {
             self.conflicts.remove(&outline);
