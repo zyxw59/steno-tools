@@ -6,6 +6,7 @@ use std::{
 };
 
 use itertools::Itertools;
+use regex::{RegexSet, RegexSetBuilder};
 use serde::Deserialize;
 
 use crate::{
@@ -61,27 +62,34 @@ impl PhoneticTheory {
     ) -> Option<(Outline, Outline)> {
         let outlines_1 = self.get_outlines(pron_1).ok()?;
         let outlines_2 = self.get_outlines(pron_2).ok()?;
-        let mut candidate_1 = outline.clone();
-        let mut candidate_2 = outline.clone();
-        for item in outlines_1.into_iter().zip_longest(outlines_2) {
-            use itertools::EitherOrBoth;
-            match item {
-                EitherOrBoth::Both(left, right) => {
-                    candidate_1 = left.into();
-                    candidate_2 = right.into();
-                }
-                EitherOrBoth::Left(left) => {
-                    candidate_1 = left.into();
-                }
-                EitherOrBoth::Right(right) => {
-                    candidate_2 = right.into();
+        disambiguate_iters(outline, outlines_1, outlines_2)
+    }
+
+    pub fn disambiguate_spelling(
+        &self,
+        outline: Outline,
+        spelling_1: &str,
+        spelling_2: &str,
+    ) -> Option<(Outline, Outline)> {
+        let outlines_1 = self.spelling_options(outline.clone(), spelling_1);
+        let outlines_2 = self.spelling_options(outline.clone(), spelling_2);
+        disambiguate_iters(outline, outlines_1, outlines_2)
+    }
+
+    fn spelling_options(&self, outline: Outline, spelling: &str) -> Vec<Outline> {
+        let mut possible_outlines = vec![outline];
+        let mut next_outlines = Vec::new();
+        for conflict_rule in &self.theory.spelling_conflicts {
+            for outline in possible_outlines.drain(..) {
+                if let Some(new_outline) = conflict_rule.apply(&outline, spelling) {
+                    next_outlines.push(new_outline);
+                } else {
+                    next_outlines.push(outline);
                 }
             }
-            if candidate_1 != candidate_2 {
-                return Some((candidate_1, candidate_2));
-            }
+            std::mem::swap(&mut possible_outlines, &mut next_outlines);
         }
-        None
+        possible_outlines
     }
 
     fn prefixes_for_syllable(
@@ -198,6 +206,35 @@ impl PhoneticTheory {
         }
         Ok(())
     }
+}
+
+fn disambiguate_iters<T, U, I1, I2>(initial: T, left: I1, right: I2) -> Option<(T, T)>
+where
+    T: From<U> + PartialEq + Clone,
+    I1: IntoIterator<Item = U>,
+    I2: IntoIterator<Item = U>,
+{
+    let mut candidate_1 = initial.clone();
+    let mut candidate_2 = initial.clone();
+    for item in left.into_iter().zip_longest(right) {
+        use itertools::EitherOrBoth;
+        match item {
+            EitherOrBoth::Both(left, right) => {
+                candidate_1 = left.into();
+                candidate_2 = right.into();
+            }
+            EitherOrBoth::Left(left) => {
+                candidate_1 = left.into();
+            }
+            EitherOrBoth::Right(right) => {
+                candidate_2 = right.into();
+            }
+        }
+        if candidate_1 != candidate_2 {
+            return Some((candidate_1, candidate_2));
+        }
+    }
+    None
 }
 
 struct OutlineBuilder {
@@ -323,6 +360,8 @@ pub struct Theory {
     prefixes: PronunciationMap<Rc<[SyllableRule]>>,
     #[serde(default)]
     suffixes: PronunciationMap<Rc<[SyllableRule]>>,
+    #[serde(default)]
+    spelling_conflicts: Vec<SpellingConflict>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -463,6 +502,60 @@ impl SyllableRule {
 
     fn chords_and_skip(&self) -> (&[Chord], usize) {
         (&self.chords, self.take_next.as_ref().map_or(0, |s| s.len()))
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(try_from = "RawSpellingConflict")]
+struct SpellingConflict {
+    chord: Chord,
+    pattern: RegexSet,
+    replacements: Rc<[Chord]>,
+}
+
+impl SpellingConflict {
+    fn apply(&self, outline: &[Chord], word: &str) -> Option<Outline> {
+        let (idx, replace) = outline
+            .iter()
+            .enumerate()
+            .find_map(|(idx, &st)| Some((idx, self.try_apply(st, word)?)))?;
+        let mut outline = outline.to_owned();
+        outline[idx] = replace;
+        Some(outline.into())
+    }
+
+    fn try_apply(&self, stroke: Chord, word: &str) -> Option<Chord> {
+        if !stroke.contains(self.chord) {
+            return None;
+        }
+        let idx = self.pattern.matches(word).iter().next()?;
+        stroke.try_replace(self.chord, self.replacements[idx])
+    }
+}
+
+#[derive(Deserialize)]
+struct RawSpellingConflict {
+    chord: Chord,
+    rules: Box<[RawSpellingRule]>,
+}
+
+#[derive(Deserialize)]
+struct RawSpellingRule {
+    pattern: Box<str>,
+    replace: Chord,
+}
+
+impl TryFrom<RawSpellingConflict> for SpellingConflict {
+    type Error = regex::Error;
+
+    fn try_from(raw: RawSpellingConflict) -> Result<Self, Self::Error> {
+        let pattern = RegexSetBuilder::new(raw.rules.iter().map(|rule| &rule.pattern)).build()?;
+        let replacements = raw.rules.iter().map(|rule| rule.replace).collect();
+        Ok(Self {
+            chord: raw.chord,
+            pattern,
+            replacements,
+        })
     }
 }
 

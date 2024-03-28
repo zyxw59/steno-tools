@@ -66,6 +66,43 @@ impl GeneratedDictionary {
             self.insert(outline, entry.word, entry.pronunciation);
         }
     }
+
+    pub fn resolve_spelling_conflicts(&mut self, theory: &PhoneticTheory) {
+        let mut insertions = BTreeMap::new();
+        let mut removals = BTreeSet::new();
+        for (outline, conflicts) in &self.conflicts {
+            if conflicts.len() != 2 {
+                continue;
+            }
+            // since there's exactly two we can just take first and last
+            let entry_1 = conflicts.first().unwrap();
+            let entry_2 = conflicts.last().unwrap();
+            if entry_1.word == entry_2.word {
+                continue;
+            }
+            let Some((outline_1, outline_2)) = theory.disambiguate_spelling(
+                outline.clone(),
+                &entry_1.word,
+                &entry_2.word,
+            ) else {
+                continue;
+            };
+            // don't add this disambiguation if it would conflict with a different entry
+            if !self.valid_outlines.outlines.contains_key(&outline_1)
+                && !self.valid_outlines.outlines.contains_key(&outline_2)
+            {
+                removals.insert(outline.clone());
+                insertions.insert(outline_1, entry_1.clone());
+                insertions.insert(outline_2, entry_2.clone());
+            }
+        }
+        for outline in removals {
+            self.conflicts.remove(&outline);
+        }
+        for (outline, entry) in insertions {
+            self.insert(outline, entry.word, entry.pronunciation);
+        }
+    }
 }
 
 #[derive(Default, Debug)]

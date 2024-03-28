@@ -164,6 +164,42 @@ theory:
       - stress: None
         chords: ["-RBS", "*RBS"]
 
+  spelling_conflicts:
+    - chord: "AEU"
+      rules:
+        - pattern: "[ae][iy]"
+          replace: "AEU"
+        - pattern: "a.[aeiouy]"
+          replace: "AE"
+    - chord: "AOE"
+      rules:
+        - pattern: "ee|e.[aeiouy]"
+          replace: "AOE"
+        - pattern: "ea"
+          replace: "AE"
+    - chord: "S"
+      rules:
+        - pattern: "sc"
+          replace: "SK"
+        - pattern: "c"
+          replace: "SR"
+        - pattern: "s"
+          replace: "S"
+    - chord: "OE"
+      rules:
+        - pattern: "oa"
+          replace: "AO"
+        - pattern: "o.[aeiouy]"
+          replace: "OE"
+    - chord: "O"
+      rules:
+        - pattern: "[ao]u"
+          replace: "AU"
+        - pattern: "a"
+          replace: "AU"
+        - pattern: "o"
+          replace: "O"
+
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
     "R", "S", "T", "CH", "V", "W", "Z", "DH", "SH", "ZH", "TH",

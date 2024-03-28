@@ -92,6 +92,17 @@ impl Chord {
         (self & !Chord::STAR).highest_flag_index() < (other & !Chord::STAR).lowest_flag_index()
     }
 
+    /// Tries to replace part of the chord with a different chord. Returns `None` if `new`
+    /// conflicts with `self & !original`
+    pub fn try_replace(self, original: Chord, new: Chord) -> Option<Self> {
+        debug_assert!(self.contains(original));
+        let base = self & !original;
+        if !(base & new).is_empty() {
+            return None;
+        }
+        Some(base | new)
+    }
+
     fn highest_flag_index(self) -> i32 {
         (<Self as bitflags::Flags>::Bits::BITS - self.bits().leading_zeros()) as i32 - 1
     }
