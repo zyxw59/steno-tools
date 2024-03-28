@@ -170,8 +170,18 @@ impl GenerateOutlines {
                 }
             }
         }
-        generated_dict.resolve_phonetic_conflicts(&theory);
-        generated_dict.resolve_spelling_conflicts(&theory);
+        generated_dict.resolve_pairs(|outline, entry_1, entry_2| {
+            if entry_1.pronunciation == entry_2.pronunciation {
+                return None;
+            }
+            theory.disambiguate_phonetic(outline.clone(), &entry_1.pronunciation, &entry_2.pronunciation)
+        });
+        generated_dict.resolve_pairs(|outline, entry_1, entry_2| {
+            if entry_1.word == entry_2.word {
+                return None;
+            }
+            theory.disambiguate_spelling(outline.clone(), &entry_1.word, &entry_2.word)
+        });
         if let Some(out_path) = &self.out_file {
             serde_json::to_writer_pretty(BufWriter::new(File::create(out_path)?), &generated_dict)?;
         } else {

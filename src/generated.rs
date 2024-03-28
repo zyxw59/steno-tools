@@ -2,7 +2,7 @@ use std::collections::{btree_map::Entry, BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{chord::Outline, dictionary::Word, pronounce::Pronunciation, theory::PhoneticTheory};
+use crate::{chord::Outline, dictionary::Word, pronounce::Pronunciation};
 
 #[derive(Default, Debug, Serialize)]
 pub struct GeneratedDictionary {
@@ -30,7 +30,10 @@ impl GeneratedDictionary {
         }
     }
 
-    pub fn resolve_phonetic_conflicts(&mut self, theory: &PhoneticTheory) {
+    pub fn resolve_pairs(
+        &mut self,
+        mut f: impl FnMut(&Outline, &DictionaryEntry, &DictionaryEntry) -> Option<(Outline, Outline)>,
+    ) {
         let mut insertions = BTreeMap::new();
         let mut removals = BTreeSet::new();
         for (outline, conflicts) in &self.conflicts {
@@ -40,51 +43,7 @@ impl GeneratedDictionary {
             // since there's exactly two we can just take first and last
             let entry_1 = conflicts.first().unwrap();
             let entry_2 = conflicts.last().unwrap();
-            if entry_1.pronunciation == entry_2.pronunciation {
-                continue;
-            }
-            let Some((outline_1, outline_2)) = theory.disambiguate_phonetic(
-                outline.clone(),
-                &entry_1.pronunciation,
-                &entry_2.pronunciation,
-            ) else {
-                continue;
-            };
-            // don't add this disambiguation if it would conflict with a different entry
-            if !self.valid_outlines.outlines.contains_key(&outline_1)
-                && !self.valid_outlines.outlines.contains_key(&outline_2)
-            {
-                removals.insert(outline.clone());
-                insertions.insert(outline_1, entry_1.clone());
-                insertions.insert(outline_2, entry_2.clone());
-            }
-        }
-        for outline in removals {
-            self.conflicts.remove(&outline);
-        }
-        for (outline, entry) in insertions {
-            self.insert(outline, entry.word, entry.pronunciation);
-        }
-    }
-
-    pub fn resolve_spelling_conflicts(&mut self, theory: &PhoneticTheory) {
-        let mut insertions = BTreeMap::new();
-        let mut removals = BTreeSet::new();
-        for (outline, conflicts) in &self.conflicts {
-            if conflicts.len() != 2 {
-                continue;
-            }
-            // since there's exactly two we can just take first and last
-            let entry_1 = conflicts.first().unwrap();
-            let entry_2 = conflicts.last().unwrap();
-            if entry_1.word == entry_2.word {
-                continue;
-            }
-            let Some((outline_1, outline_2)) = theory.disambiguate_spelling(
-                outline.clone(),
-                &entry_1.word,
-                &entry_2.word,
-            ) else {
+            let Some((outline_1, outline_2)) = f(outline, entry_1, entry_2) else {
                 continue;
             };
             // don't add this disambiguation if it would conflict with a different entry
@@ -150,8 +109,8 @@ impl Serialize for Dictionary {
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]
 pub struct DictionaryEntry {
-    word: Word,
-    pronunciation: Pronunciation,
+    pub word: Word,
+    pub pronunciation: Pronunciation,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
