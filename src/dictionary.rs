@@ -5,6 +5,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use crate::chord::Outline;
+
 #[derive(Default, Debug, Serialize)]
 pub struct Dictionary {
     #[serde(flatten)]
@@ -14,50 +16,8 @@ pub struct Dictionary {
 }
 
 impl Dictionary {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn outlines(&self) -> &BTreeMap<Outline, Word> {
-        &self.outlines
-    }
-
     pub fn words(&self) -> &BTreeMap<Word, BTreeSet<Outline>> {
         &self.words
-    }
-
-    pub fn insert(&mut self, word: Word, outline: Outline) -> Result<(), Word> {
-        match self.outlines.entry(outline.clone()) {
-            Entry::Occupied(entry) => {
-                if entry.get() != &word {
-                    return Err(entry.get().clone());
-                } else {
-                    return Ok(());
-                }
-            }
-            Entry::Vacant(entry) => entry.insert(word.clone()),
-        };
-        self.words.entry(word.clone()).or_default().insert(outline);
-        Ok(())
-    }
-
-    pub fn remove_outline(&mut self, outline: &Outline) -> Option<Word> {
-        let word = self.outlines.remove(outline)?;
-        if let Entry::Occupied(mut entry) = self.words.entry(word.clone()) {
-            entry.get_mut().remove(outline);
-            if entry.get().is_empty() {
-                entry.remove();
-            }
-        }
-        Some(word)
-    }
-
-    pub fn num_outlines(&self) -> usize {
-        self.outlines.len()
-    }
-
-    pub fn num_words(&self) -> usize {
-        self.words.len()
     }
 }
 
@@ -77,18 +37,6 @@ impl<'de> Deserialize<'de> for Dictionary {
             entry.or_default().insert(outline.clone());
         }
         Ok(Self { outlines, words })
-    }
-}
-
-#[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
-#[serde(transparent)]
-pub struct Outline(Rc<str>);
-crate::fmt_impls!(Outline);
-crate::deref_impls!(Outline as str);
-
-impl<T: Into<Rc<str>>> From<T> for Outline {
-    fn from(s: T) -> Self {
-        Self(s.into())
     }
 }
 
