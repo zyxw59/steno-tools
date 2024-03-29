@@ -215,7 +215,7 @@ phonology:
       second: ["L"]
     - first: ["F", "TH", "SH", "V"]
       second: ["R"]
-    - first: ["S", "Z", "TH", "HH", "V"]
+    - first: ["S", "Z", "HH", "V"]
       second: ["W"]
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["S"]
