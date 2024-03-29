@@ -693,7 +693,6 @@ pub struct Phonology {
 }
 
 impl Phonology {
-    #[allow(unused)]
     pub fn syllabize_word<'p, 'w>(
         &'p self,
         word: &'w [Phoneme],
