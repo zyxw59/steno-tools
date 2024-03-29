@@ -656,12 +656,22 @@ pub struct RawPhonology {
     onset_singles: BTreeSet<Phoneme>,
     onset_clusters: Vec<OnsetCluster>,
     vowels: BTreeSet<Phoneme>,
+    #[serde(default)]
+    multi_syllables: BTreeSet<MultiSyllable>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 struct OnsetCluster {
     first: BTreeSet<Phoneme>,
     second: BTreeSet<Phoneme>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+struct MultiSyllable {
+    onset: Pronunciation,
+    vowel: Phoneme,
+    coda: Pronunciation,
+    stress: Stress,
 }
 
 impl From<RawPhonology> for Phonology {
@@ -680,6 +690,7 @@ impl From<RawPhonology> for Phonology {
             onset_singles: raw.onset_singles,
             onset_clusters,
             vowels: raw.vowels,
+            multi_syllables: raw.multi_syllables
         }
     }
 }
@@ -690,6 +701,7 @@ pub struct Phonology {
     onset_singles: BTreeSet<Phoneme>,
     onset_clusters: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
     vowels: BTreeSet<Phoneme>,
+    multi_syllables: BTreeSet<MultiSyllable>,
 }
 
 impl Phonology {
