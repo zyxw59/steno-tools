@@ -14,6 +14,7 @@ mod generated;
 mod pronounce;
 mod theory;
 mod wrapper_impls;
+mod tree;
 
 use dictionary::{Dictionary, Word};
 use generated::{GeneratedDictionary, NoOutline};
