@@ -12,6 +12,7 @@ use serde::Deserialize;
 use crate::{
     chord::{Chord, Outline},
     pronounce::{Phoneme, Pronunciation, PronunciationSlice, Stress},
+    tree::Tree,
 };
 
 #[derive(Debug, Clone, Deserialize)]
@@ -690,7 +691,7 @@ impl From<RawPhonology> for Phonology {
             onset_singles: raw.onset_singles,
             onset_clusters,
             vowels: raw.vowels,
-            multi_syllables: raw.multi_syllables
+            multi_syllables: raw.multi_syllables,
         }
     }
 }
@@ -760,6 +761,27 @@ impl Phonology {
             vowel,
             coda,
         }
+    }
+
+    fn syllable_tree(&self, word: &[Phoneme]) -> Tree<SyllableIndices> {
+        Tree::build(self.get_initial_syllables(word), |prev| {
+            self.get_next_syllables(prev.coda, word)
+        })
+    }
+
+    fn get_initial_syllables<'p, 'w>(
+        &'p self,
+        word: &'w [Phoneme],
+    ) -> impl IntoIterator<Item = SyllableIndices> + 'p + 'w {
+        []
+    }
+
+    fn get_next_syllables<'p, 'w>(
+        &'p self,
+        start_at: usize,
+        word: &'w [Phoneme],
+    ) -> impl IntoIterator<Item = SyllableIndices> + 'p + 'w {
+        []
     }
 }
 
