@@ -693,10 +693,10 @@ impl MultiSyllable {
             let coda = vowel + 1;
             let end = coda + self.coda.len();
             let vowel_ph = &word[vowel];
-            if &word[onset..vowel] == &*self.onset
+            if word[onset..vowel] == *self.onset
                 && vowel_ph == &self.vowel
                 && vowel_ph.stress() == self.stress
-                && &word[coda..end] == &*self.coda
+                && word[coda..end] == *self.coda
             {
                 return Some((
                     SyllableIndices {
@@ -802,10 +802,17 @@ impl Phonology {
     }
 
     fn syllable_tree<'w>(&self, word: &'w [Phoneme]) -> Tree<Syllable<'w>> {
-        Tree::build(self.get_initial_syllables(word), |(prev, end)| {
-            self.get_next_syllables(word, end.unwrap_or(prev.coda), end.is_none())
-        })
-        .contract(|(prev, end), (next, _)| {
+        let half_syllable_tree = Tree::build(self.get_initial_syllables(word), |(prev, end)| {
+            if prev.onset == word.len() {
+                None
+            } else {
+                Some(self.get_next_syllables(word, end.unwrap_or(prev.coda), end.is_none()))
+            }
+            .into_iter()
+            .flatten()
+        });
+        eprintln!("half-syllables: {half_syllable_tree:#?}");
+        half_syllable_tree.contract(|(prev, end), (next, _)| {
             let end = end.unwrap_or(prev.coda.max(next.onset));
             Syllable {
                 word,
@@ -859,7 +866,7 @@ trait Captures<U> {}
 impl<T: ?Sized, U> Captures<U> for T {}
 
 /// Start indices of the onset, vowel, and coda of a syllable
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 struct SyllableIndices {
     stress: Stress,
     onset: usize,
@@ -867,7 +874,13 @@ struct SyllableIndices {
     coda: usize,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+impl fmt::Debug for SyllableIndices {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}..{}..{} ({:?})", self.onset, self.vowel, self.coda, self.stress)
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Syllable<'w> {
     word: &'w [Phoneme],
     indices: SyllableIndices,
@@ -917,6 +930,12 @@ impl<'w> Syllable<'w> {
 impl fmt::Display for Syllable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&PronunciationSlice(self.as_slice()), f)
+    }
+}
+
+impl fmt::Debug for Syllable<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(&PronunciationSlice(self.as_slice()), f)
     }
 }
 
@@ -978,6 +997,31 @@ mod tests {
             .map(|s| s.to_string())
             .collect::<Vec<_>>();
 
+        assert_eq!(actual_syllables, expected_syllables);
+        Ok(())
+    }
+
+    #[test_case("L AH1 V AH0 B AH0 L", &[
+        "L AH1 V/AH0 B AH0 L",
+        "L AH1 V/AH0/B AH0 L",
+        "L AH1/V AH0/B AH0 L",
+    ] ; "loveable")]
+    fn syllabification_2(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
+        let theory: PhoneticTheory =
+            serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
+        let phonology = theory.phonology;
+        let pronunciation = Pronunciation::from(word);
+        let tree = phonology.syllable_tree(&pronunciation);
+        eprintln!("syllable tree: {tree:?}");
+        let actual_syllables = tree
+            .as_subtree()
+            .all_matching_paths(|last_syllable| last_syllable.end == pronunciation.len())
+            .map(|path| {
+                let mut path_vec = path.map(ToString::to_string).collect::<Vec<_>>();
+                path_vec.reverse();
+                path_vec.join("/")
+            })
+            .collect::<Vec<_>>();
         assert_eq!(actual_syllables, expected_syllables);
         Ok(())
     }

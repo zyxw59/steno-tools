@@ -47,8 +47,9 @@ impl<T> Tree<T> {
                 let (mut parent, children_iter) = node.map_tuple_first(&mut generator);
                 let start = children_start + staging_2.len();
                 staging_2.extend(
-                    children_iter.into_iter()
-                    .map(|value| Node::new(value, parent_idx))
+                    children_iter
+                        .into_iter()
+                        .map(|value| Node::new(value, parent_idx)),
                 );
                 let end = children_start + staging_2.len();
                 parent.children = start..end;
@@ -71,7 +72,7 @@ impl<T> Tree<T> {
                 let grandchildren = if child.children.is_empty() {
                     0..0
                 } else {
-                    (child.children.start - root_len) .. (child.children.end - root_len)
+                    (child.children.start - root_len)..(child.children.end - root_len)
                 };
                 let new_child = Node {
                     parent: child.parent.and_then(|idx| idx.checked_sub(root_len)),
@@ -85,7 +86,7 @@ impl<T> Tree<T> {
         Tree { nodes, range }
     }
 
-    fn as_subtree(&self) -> SubTree<T> {
+    pub fn as_subtree(&self) -> SubTree<T> {
         SubTree {
             nodes: &self.nodes,
             range: self.range.clone(),
@@ -99,10 +100,86 @@ impl<T: fmt::Debug> fmt::Debug for Tree<T> {
     }
 }
 
-#[derive(Clone)]
 pub struct SubTree<'a, T> {
     nodes: &'a [Node<T>],
     range: Range<usize>,
+}
+
+impl<'a, T> SubTree<'a, T> {
+    pub fn all_paths(&self) -> TreePathsIter<'a, T, impl FnMut(&'a T) -> bool> {
+        let idx = Some(self.first_leaf(self.range.start));
+        TreePathsIter {
+            tree: self.clone(),
+            idx,
+            pred: |_| true,
+        }
+    }
+
+    pub fn all_matching_paths<F>(&self, pred: F) -> TreePathsIter<'a, T, F>
+    where
+        F: FnMut(&'a T) -> bool,
+    {
+        let idx = Some(self.first_leaf(self.range.start));
+        TreePathsIter {
+            tree: self.clone(),
+            idx,
+            pred,
+        }
+    }
+
+    fn first_leaf(&self, root: usize) -> usize {
+        self.first_matching_leaf(root, |_| true).unwrap()
+    }
+
+    fn first_matching_leaf<F>(&self, mut root: usize, mut pred: F) -> Option<usize>
+    where
+        F: FnMut(&'a T) -> bool,
+    {
+        loop {
+            let node = &self.nodes[root];
+            let children = &node.children;
+            if children.is_empty() {
+                if pred(&node.value) {
+                    return Some(root);
+                }
+                return self.next_matching_leaf(root, pred);
+            }
+            root = children.start
+        }
+    }
+
+    fn next_leaf(&self, current: usize) -> Option<usize> {
+        self.next_matching_leaf(current, |_| true)
+    }
+
+    fn next_matching_leaf<F>(&self, mut current: usize, pred: F) -> Option<usize>
+    where
+        F: FnMut(&'a T) -> bool,
+    {
+        loop {
+            let parent = self.nodes[current].parent;
+            let siblings = if let Some(parent) = parent {
+                &self.nodes[parent].children
+            } else {
+                &self.range
+            };
+            if current < siblings.end - 1 {
+                return self.first_matching_leaf(current + 1, pred);
+            }
+            // else: current is the last sibling of parent; get the next leaf after parent, or
+            // `None` if current is a root
+            current = parent?;
+        }
+    }
+}
+
+impl<T> Clone for SubTree<'_, T> {
+    fn clone(&self) -> Self {
+        Self {
+            nodes: self.nodes,
+            range: self.range.clone(),
+        }
+    }
 }
 
 impl<T: fmt::Debug> fmt::Debug for SubTree<'_, T> {
@@ -118,6 +195,41 @@ impl<T: fmt::Debug> fmt::Debug for SubTree<'_, T> {
                 )
             }))
             .finish()
+    }
+}
+
+pub struct TreeReversePathIter<'a, T> {
+    nodes: &'a [Node<T>],
+    idx: Option<usize>,
+}
+
+impl<'a, T> Iterator for TreeReversePathIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let node = &self.nodes[self.idx?];
+        self.idx = node.parent;
+        Some(&node.value)
+    }
+}
+
+pub struct TreePathsIter<'a, T, F> {
+    tree: SubTree<'a, T>,
+    idx: Option<usize>,
+    pred: F,
+}
+
+impl<'a, T, F: FnMut(&'a T) -> bool> Iterator for TreePathsIter<'a, T, F> {
+    type Item = TreeReversePathIter<'a, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let idx = self.idx?;
+        let it = TreeReversePathIter {
+            nodes: self.tree.nodes,
+            idx: Some(idx),
+        };
+        self.idx = self.tree.next_matching_leaf(idx, &mut self.pred);
+        Some(it)
     }
 }
 
@@ -145,9 +257,19 @@ impl<T> Node<T> {
         }
     }
 
-    fn map_tuple_first<F, U, V>(self, func: F) -> (Node<U>, V) where F: FnOnce(T) -> (U, V) {
+    fn map_tuple_first<F, U, V>(self, func: F) -> (Node<U>, V)
+    where
+        F: FnOnce(T) -> (U, V),
+    {
         let (value, other) = func(self.value);
-        (Node { value, parent: self.parent, children: self.children }, other)
+        (
+            Node {
+                value,
+                parent: self.parent,
+                children: self.children,
+            },
+            other,
+        )
     }
 }
 
