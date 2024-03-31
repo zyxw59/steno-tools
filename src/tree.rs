@@ -59,6 +59,32 @@ impl<T> Tree<T> {
         Self { nodes, range }
     }
 
+    /// Generates a new tree by replacing each edge with a node.
+    pub fn contract<F, U>(self, mut contraction: F) -> Tree<U>
+    where
+        F: FnMut(&T, &T) -> U,
+    {
+        let root_len = self.range.len();
+        let mut nodes = Vec::with_capacity(self.nodes.len() - root_len);
+        for parent in &self.nodes {
+            for child in &self.nodes[parent.children.clone()] {
+                let grandchildren = if child.children.is_empty() {
+                    0..0
+                } else {
+                    (child.children.start - root_len) .. (child.children.end - root_len)
+                };
+                let new_child = Node {
+                    parent: child.parent.and_then(|idx| idx.checked_sub(root_len)),
+                    children: grandchildren,
+                    value: contraction(&parent.value, &child.value),
+                };
+                nodes.push(new_child);
+            }
+        }
+        let range = 0..(self.range.map(|idx| self.nodes[idx].children.len()).sum());
+        Tree { nodes, range }
+    }
+
     fn as_subtree(&self) -> SubTree<T> {
         SubTree {
             nodes: &self.nodes,
@@ -135,5 +161,12 @@ mod tests {
         let tree_2 = Tree::build_two_stage([4], |x| (x, 0..x));
 
         assert_eq!(tree_1, tree_2);
+    }
+
+    #[test]
+    fn contraction() {
+        let tree_1 = Tree::build(0..4, |&x| 0..x);
+        let tree_2 = tree_1.contract(|x, y| format!("{x}-{y}"));
+        println!("{tree_2:#?}");
     }
 }

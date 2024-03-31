@@ -231,3 +231,7 @@ phonology:
       vowel: "AH"
       coda: "B AH L"
       stress: None
+    - onset: ""
+      vowel: "AH"
+      coda: ""
+      stress: None

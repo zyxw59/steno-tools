@@ -658,7 +658,7 @@ pub struct RawPhonology {
     onset_clusters: Vec<OnsetCluster>,
     vowels: BTreeSet<Phoneme>,
     #[serde(default)]
-    multi_syllables: BTreeSet<MultiSyllable>,
+    multi_syllables: Vec<MultiSyllable>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -673,6 +673,44 @@ struct MultiSyllable {
     vowel: Phoneme,
     coda: Pronunciation,
     stress: Stress,
+}
+
+impl MultiSyllable {
+    fn len(&self) -> usize {
+        self.onset.len() + 1 + self.coda.len()
+    }
+
+    fn find(
+        &self,
+        word: &[Phoneme],
+        starting_range: Range<usize>,
+    ) -> Option<(SyllableIndices, usize)> {
+        for onset in starting_range {
+            if onset + self.len() > word.len() {
+                break;
+            }
+            let vowel = onset + self.onset.len();
+            let coda = vowel + 1;
+            let end = coda + self.coda.len();
+            let vowel_ph = &word[vowel];
+            if &word[onset..vowel] == &*self.onset
+                && vowel_ph == &self.vowel
+                && vowel_ph.stress() == self.stress
+                && &word[coda..end] == &*self.coda
+            {
+                return Some((
+                    SyllableIndices {
+                        onset,
+                        vowel,
+                        coda,
+                        stress: self.stress,
+                    },
+                    end,
+                ));
+            }
+        }
+        None
+    }
 }
 
 impl From<RawPhonology> for Phonology {
@@ -702,7 +740,7 @@ pub struct Phonology {
     onset_singles: BTreeSet<Phoneme>,
     onset_clusters: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
     vowels: BTreeSet<Phoneme>,
-    multi_syllables: BTreeSet<MultiSyllable>,
+    multi_syllables: Vec<MultiSyllable>,
 }
 
 impl Phonology {
@@ -763,27 +801,62 @@ impl Phonology {
         }
     }
 
-    fn syllable_tree(&self, word: &[Phoneme]) -> Tree<SyllableIndices> {
-        Tree::build(self.get_initial_syllables(word), |prev| {
-            self.get_next_syllables(prev.coda, word)
+    fn syllable_tree<'w>(&self, word: &'w [Phoneme]) -> Tree<Syllable<'w>> {
+        Tree::build(self.get_initial_syllables(word), |(prev, end)| {
+            self.get_next_syllables(word, end.unwrap_or(prev.coda), end.is_none())
+        })
+        .contract(|(prev, end), (next, _)| {
+            let end = end.unwrap_or(prev.coda.max(next.onset));
+            Syllable {
+                word,
+                indices: *prev,
+                end,
+            }
         })
     }
 
     fn get_initial_syllables<'p, 'w>(
         &'p self,
         word: &'w [Phoneme],
-    ) -> impl IntoIterator<Item = SyllableIndices> + 'p + 'w {
-        []
+    ) -> impl Iterator<Item = (SyllableIndices, Option<usize>)> + Captures<(&'p (), &'w ())> {
+        self.get_next_syllables(word, 0, false)
     }
 
     fn get_next_syllables<'p, 'w>(
         &'p self,
-        start_at: usize,
         word: &'w [Phoneme],
-    ) -> impl IntoIterator<Item = SyllableIndices> + 'p + 'w {
-        []
+        start_at: usize,
+        allow_coda: bool,
+    ) -> impl Iterator<Item = (SyllableIndices, Option<usize>)> + Captures<(&'p (), &'w ())> {
+        let plain_syllable = self.syllabize_one(word, start_at);
+        let end = if allow_coda {
+            plain_syllable.coda
+        } else {
+            start_at + 1
+        };
+        let others = self.find_multisyllable(word, start_at..end);
+        let plain_syllable_iter = if allow_coda || plain_syllable.onset == start_at {
+            Some((plain_syllable, None))
+        } else {
+            None
+        };
+        others.chain(plain_syllable_iter)
+    }
+
+    fn find_multisyllable<'p, 'w>(
+        &'p self,
+        word: &'w [Phoneme],
+        starting_range: Range<usize>,
+    ) -> impl Iterator<Item = (SyllableIndices, Option<usize>)> + Captures<(&'p (), &'w ())> {
+        self.multi_syllables
+            .iter()
+            .filter_map(move |multi| multi.find(word, starting_range.clone()))
+            .map(|(si, end)| (si, Some(end)))
     }
 }
+
+trait Captures<U> {}
+impl<T: ?Sized, U> Captures<U> for T {}
 
 /// Start indices of the onset, vowel, and coda of a syllable
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
