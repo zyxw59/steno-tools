@@ -55,6 +55,42 @@ impl PhoneticTheory {
             .map(From::from)
     }
 
+    fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> Tree<OutlinePiece> {
+        let syllables = self.phonology.syllable_tree(pronunciation);
+        Tree::build(
+            // initial strokes
+            syllables
+                .roots_with_indices()
+                .flat_map(|(idx, syllable)| self.outlines_for_syllable(None, *syllable, idx)),
+            |&prev| {
+                syllables
+                    .children_with_indices(prev.syllable_node)
+                    .flat_map(move |(idx, syllable)| {
+                        self.outlines_for_syllable(Some(prev), *syllable, idx)
+                    })
+            },
+        )
+    }
+
+    fn outlines_for_syllable(
+        &self,
+        prev: Option<OutlinePiece>,
+        syllable: Syllable,
+        index: usize,
+    ) -> impl Iterator<Item = OutlinePiece> {
+        let mut next_outlines = Vec::new();
+        self.prefixes_for_syllable2(prev, syllable, index, &mut next_outlines);
+        self.suffixes_for_syllable2(prev, syllable, index, &mut next_outlines);
+
+        // let res = self.write_outs_for_syllable(syllable, &mut possible_outlines);
+        // next_outlines.extend(possible_outlines.drain(..).map(OutlineBuilder::push_empty));
+        // if next_outlines.is_empty() {
+        //     res?;
+        // }
+        // possible_outlines = next_outlines;
+        [].into_iter()
+    }
+
     pub fn disambiguate_phonetic(
         &self,
         outline: Outline,
@@ -110,6 +146,72 @@ impl PhoneticTheory {
         }
     }
 
+    fn prefixes_for_syllable2(
+        &self,
+        prev: Option<OutlinePiece>,
+        syllable: Syllable,
+        syllable_node: usize,
+        next_outlines: &mut Vec<OutlinePiece>,
+    ) {
+        let st = prev.and_then(|op| op.is_prefix.then_some(op.stroke));
+        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        let (chords, skip) = self.theory.get_prefix(syllable, prev_skip);
+        for &ch in chords {
+            if let Some(st) = st {
+                if (st & ch).is_empty() && st.before_ignore_star(ch) {
+                    next_outlines.push(OutlinePiece {
+                        stroke: st & ch,
+                        replace_previous: true,
+                        is_prefix: true,
+                        skip,
+                        syllable_node,
+                    })
+                }
+            } else {
+                next_outlines.push(OutlinePiece {
+                    stroke: ch,
+                    replace_previous: false,
+                    is_prefix: true,
+                    skip,
+                    syllable_node,
+                })
+            }
+        }
+    }
+
+    fn suffixes_for_syllable2(
+        &self,
+        prev: Option<OutlinePiece>,
+        syllable: Syllable,
+        syllable_node: usize,
+        next_outlines: &mut Vec<OutlinePiece>,
+    ) {
+        let st = prev.map(|op| op.stroke);
+        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        let (chords, skip) = self.theory.get_suffix(syllable, prev_skip);
+        for &ch in chords {
+            if let Some(st) = st {
+                if (st & ch).is_empty() && st.before_ignore_star(ch) {
+                    next_outlines.push(OutlinePiece {
+                        stroke: st & ch,
+                        replace_previous: true,
+                        is_prefix: false,
+                        skip,
+                        syllable_node
+                    });
+                }
+                // also push the suffix as a standalone
+                next_outlines.push(OutlinePiece {
+                    stroke: ch,
+                    replace_previous: false,
+                    is_prefix: false,
+                    skip,
+                    syllable_node,
+                })
+            }
+        }
+    }
+
     fn suffixes_for_syllable(
         &self,
         syllable: Syllable,
@@ -134,6 +236,76 @@ impl PhoneticTheory {
                 }
             }
         }
+    }
+
+    fn write_outs_for_syllable2(
+        &self,
+        prev: Option<OutlinePiece>,
+        mut syllable: Syllable,
+        syllable_node: usize,
+    ) -> Vec<OutlinePiece> {
+        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        syllable.skip(prev_skip);
+        let mut possible_outlines = vec![OutlinePiece {
+            stroke: prev.and_then(|op| op.is_prefix.then_some(op.stroke)).unwrap_or(Chord::empty()),
+            replace_previous: true,
+            is_prefix: false,
+            skip: 0,
+            syllable_node,
+        }];
+        let mut next_outlines = Vec::new();
+        for possible_chords in self.theory.onset_matches(syllable) {
+            for outline in possible_outlines.drain(..) {
+                let st = outline.stroke;
+                for &ch in possible_chords {
+                    if (st & ch).is_empty() && st.before_ignore_star(ch) {
+                        next_outlines.push(outline.with_stroke(st | ch))
+                    }
+                }
+            }
+            std::mem::swap(&mut possible_outlines, &mut next_outlines);
+        }
+        // if possible_outlines.is_empty() {
+        //     return Err(anyhow::anyhow!(
+        //         "no strokes for onset {}",
+        //         PronunciationSlice(syllable.onset())
+        //     ));
+        // }
+        for possible_chords in self.theory.vowel_matches(syllable) {
+            for outline in possible_outlines.drain(..) {
+                let st = outline.stroke;
+                for &ch in possible_chords {
+                    if (st & ch).is_empty() && st.before_ignore_star(ch) {
+                        next_outlines.push(outline.with_stroke(st | ch))
+                    }
+                }
+            }
+            std::mem::swap(&mut possible_outlines, &mut next_outlines);
+        }
+        // if possible_outlines.is_empty() {
+        //     return Err(anyhow::anyhow!(
+        //         "no strokes for vowel {}",
+        //         PronunciationSlice(syllable.vowel())
+        //     ));
+        // }
+        for possible_chords in self.theory.coda_matches(syllable) {
+            for outline in possible_outlines.drain(..) {
+                let st = outline.stroke;
+                for &ch in possible_chords {
+                    if (st & ch).is_empty() && st.before_ignore_star(ch) {
+                        next_outlines.push(outline.with_stroke(st | ch))
+                    }
+                }
+            }
+            std::mem::swap(&mut possible_outlines, &mut next_outlines);
+        }
+        // if possible_outlines.is_empty() {
+        //     return Err(anyhow::anyhow!(
+        //         "no strokes for coda {}",
+        //         PronunciationSlice(syllable.coda())
+        //     ));
+        // }
+        possible_outlines
     }
 
     fn write_outs_for_syllable(
@@ -236,6 +408,24 @@ where
         }
     }
     None
+}
+
+#[derive(Debug, Clone, Copy)]
+struct OutlinePiece {
+    stroke: Chord,
+    replace_previous: bool,
+    is_prefix: bool,
+    skip: usize,
+    syllable_node: usize,
+}
+
+impl OutlinePiece {
+    fn with_stroke(self, stroke: Chord) -> Self {
+        Self {
+            stroke,
+            ..self
+        }
+    }
 }
 
 struct OutlineBuilder {
@@ -876,7 +1066,11 @@ struct SyllableIndices {
 
 impl fmt::Debug for SyllableIndices {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}..{}..{} ({:?})", self.onset, self.vowel, self.coda, self.stress)
+        write!(
+            f,
+            "{}..{}..{} ({:?})",
+            self.onset, self.vowel, self.coda, self.stress
+        )
     }
 }
 
@@ -914,6 +1108,14 @@ impl<'w> Syllable<'w> {
 
     pub fn as_slice(&self) -> &'w [Phoneme] {
         &self.word[self.indices.onset..self.end]
+    }
+
+    /// Skips the first `skip` phonemes of the syllable
+    fn skip(&mut self, skip: usize) {
+        self.indices.onset += skip;
+        self.indices.vowel = self.indices.vowel.max(self.indices.onset);
+        self.indices.coda = self.indices.coda.max(self.indices.onset);
+        self.end = self.end.max(self.indices.onset);
     }
 
     /// Returns the part of the syllable up to the specified index into the word.

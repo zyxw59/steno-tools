@@ -86,6 +86,18 @@ impl<T> Tree<T> {
         Tree { nodes, range }
     }
 
+    pub fn roots_with_indices(&self) -> impl Iterator<Item = (usize, &T)> {
+        self.range_with_indices(self.range.clone())
+    }
+
+    pub fn children_with_indices(&self, parent: usize) -> impl Iterator<Item = (usize, &T)> {
+        self.range_with_indices(self.nodes[parent].children.clone())
+    }
+
+    fn range_with_indices(&self, range: Range<usize>) -> impl Iterator<Item = (usize, &T)> {
+        range.map(|i| (i, &self.nodes[i].value))
+    }
+
     pub fn as_subtree(&self) -> SubTree<T> {
         SubTree {
             nodes: &self.nodes,
