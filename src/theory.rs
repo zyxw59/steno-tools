@@ -197,7 +197,7 @@ impl PhoneticTheory {
                         replace_previous: true,
                         is_prefix: false,
                         skip,
-                        syllable_node
+                        syllable_node,
                     });
                 }
                 // also push the suffix as a standalone
@@ -247,7 +247,9 @@ impl PhoneticTheory {
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
         syllable.skip(prev_skip);
         let mut possible_outlines = vec![OutlinePiece {
-            stroke: prev.and_then(|op| op.is_prefix.then_some(op.stroke)).unwrap_or(Chord::empty()),
+            stroke: prev
+                .and_then(|op| op.is_prefix.then_some(op.stroke))
+                .unwrap_or(Chord::empty()),
             replace_previous: true,
             is_prefix: false,
             skip: 0,
@@ -421,10 +423,7 @@ struct OutlinePiece {
 
 impl OutlinePiece {
     fn with_stroke(self, stroke: Chord) -> Self {
-        Self {
-            stroke,
-            ..self
-        }
+        Self { stroke, ..self }
     }
 }
 
@@ -992,15 +991,19 @@ impl Phonology {
     }
 
     fn syllable_tree<'w>(&self, word: &'w [Phoneme]) -> Tree<Syllable<'w>> {
-        let half_syllable_tree = Tree::build(self.get_initial_syllables(word), |(prev, end)| {
-            if prev.onset == word.len() {
-                None
-            } else {
-                Some(self.get_next_syllables(word, end.unwrap_or(prev.coda), end.is_none()))
-            }
-            .into_iter()
-            .flatten()
-        });
+        let half_syllable_tree = Tree::build_with_leaf_validation(
+            self.get_initial_syllables(word),
+            |(prev, end)| {
+                if prev.onset == word.len() {
+                    None
+                } else {
+                    Some(self.get_next_syllables(word, end.unwrap_or(prev.coda), end.is_none()))
+                }
+                .into_iter()
+                .flatten()
+            },
+            |(prev, _end)| prev.onset == word.len(),
+        );
         eprintln!("half-syllables: {half_syllable_tree:#?}");
         half_syllable_tree.contract(|(prev, end), (next, _)| {
             let end = end.unwrap_or(prev.coda.max(next.onset));
@@ -1173,6 +1176,7 @@ impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
 mod tests {
     use std::{fs::File, io::BufReader};
 
+    use itertools::Itertools;
     use test_case::test_case;
 
     use super::{PhoneticTheory, Pronunciation};
@@ -1213,16 +1217,10 @@ mod tests {
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
         let phonology = theory.phonology;
         let pronunciation = Pronunciation::from(word);
-        let tree = phonology.syllable_tree(&pronunciation);
+        let mut tree = phonology.syllable_tree(&pronunciation);
         eprintln!("syllable tree: {tree:?}");
         let actual_syllables = tree
-            .as_subtree()
-            .all_matching_paths(|last_syllable| last_syllable.end == pronunciation.len())
-            .map(|path| {
-                let mut path_vec = path.map(ToString::to_string).collect::<Vec<_>>();
-                path_vec.reverse();
-                path_vec.join("/")
-            })
+            .all_paths_with(|path| path.map(ToString::to_string).join("/"))
             .collect::<Vec<_>>();
         assert_eq!(actual_syllables, expected_syllables);
         Ok(())
