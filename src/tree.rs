@@ -262,6 +262,38 @@ impl<'a, T> TreeRef<'a, T> {
         }
     }
 
+    pub fn multi_map<I, U>(self, mut generator: impl FnMut(&'a T, Option<&U>) -> I) -> Tree<U>
+    where
+        I: IntoIterator<Item = U>,
+    {
+        let mut intermediate = Tree::new();
+        for (idx, node) in self.node_iter() {
+            for value in generator(&node.value, None) {
+                intermediate.insert((idx, value), None);
+            }
+        }
+
+        let mut next_idx = intermediate.roots.map(|(first, _)| first);
+        while let Some(new_parent_idx) = next_idx {
+            let &(parent_idx, _) = intermediate.get(new_parent_idx).unwrap();
+            for (idx, node) in self.child_nodes(parent_idx) {
+                let (_, parent_value) = intermediate.get(new_parent_idx).unwrap();
+                for value in generator(&node.value, Some(parent_value)) {
+                    intermediate.insert((idx, value), Some(new_parent_idx));
+                }
+            }
+            next_idx = intermediate.as_ref().next_dfs(new_parent_idx);
+            // only allow leaf nodes where the original tree had leaves
+            if intermediate.slab[new_parent_idx.0].children.is_none()
+                && self.slab[parent_idx.0].children.is_some()
+            {
+                intermediate.remove_branch(new_parent_idx);
+            }
+        }
+
+        intermediate.map(|(_, value)| value)
+    }
+
     pub fn paths(self) -> TreePaths<'a, T> {
         TreePaths {
             iter: self.map(|value| value),
@@ -470,7 +502,9 @@ impl<'tree, T> TreePaths<'tree, T> {
         })
     }
 
-    pub fn with_collect<C>(self) -> impl Iterator<Item = C> + 'tree
+    pub fn with_collect<C>(
+        self,
+    ) -> MappedTreePathsIter<'tree, T, impl for<'iter> FnMut(PathIter<'iter, 'tree, T>) -> C>
     where
         C: FromIterator<&'tree T>,
     {

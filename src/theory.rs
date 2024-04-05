@@ -55,33 +55,21 @@ impl PhoneticTheory {
             .map(From::from)
     }
 
-    // fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> Tree<OutlinePiece> {
-    //     let syllables = self.phonology.syllable_tree(pronunciation);
-    //     Tree::build_with_leaf_validation(
-    //         // initial strokes
-    //         syllables
-    //             .roots_with_indices()
-    //             .flat_map(|(idx, syllable)| self.outlines_for_syllable(None, *syllable, idx)),
-    //         |&prev| {
-    //             syllables
-    //                 .children_with_indices(prev.syllable_node)
-    //                 .flat_map(move |(idx, syllable)| {
-    //                     self.outlines_for_syllable(Some(prev), *syllable, idx)
-    //                 })
-    //         },
-    //         |_| true,
-    //     )
-    // }
+    fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> Tree<OutlinePiece> {
+        let syllables = self.phonology.syllable_tree(pronunciation);
+        syllables.as_ref().multi_map(|syllable, prev_stroke| {
+            self.outlines_for_syllable(prev_stroke.copied(), *syllable)
+        })
+    }
 
     fn outlines_for_syllable(
         &self,
         prev: Option<OutlinePiece>,
         syllable: Syllable,
-        index: usize,
     ) -> impl Iterator<Item = OutlinePiece> {
         let mut next_outlines = Vec::new();
-        self.prefixes_for_syllable2(prev, syllable, index, &mut next_outlines);
-        self.suffixes_for_syllable2(prev, syllable, index, &mut next_outlines);
+        self.prefixes_for_syllable2(prev, syllable, &mut next_outlines);
+        self.suffixes_for_syllable2(prev, syllable, &mut next_outlines);
 
         // let res = self.write_outs_for_syllable(syllable, &mut possible_outlines);
         // next_outlines.extend(possible_outlines.drain(..).map(OutlineBuilder::push_empty));
@@ -151,7 +139,6 @@ impl PhoneticTheory {
         &self,
         prev: Option<OutlinePiece>,
         syllable: Syllable,
-        syllable_node: usize,
         next_outlines: &mut Vec<OutlinePiece>,
     ) {
         let st = prev.and_then(|op| op.is_prefix.then_some(op.stroke));
@@ -165,7 +152,6 @@ impl PhoneticTheory {
                         replace_previous: true,
                         is_prefix: true,
                         skip,
-                        syllable_node,
                     })
                 }
             } else {
@@ -174,7 +160,6 @@ impl PhoneticTheory {
                     replace_previous: false,
                     is_prefix: true,
                     skip,
-                    syllable_node,
                 })
             }
         }
@@ -184,7 +169,6 @@ impl PhoneticTheory {
         &self,
         prev: Option<OutlinePiece>,
         syllable: Syllable,
-        syllable_node: usize,
         next_outlines: &mut Vec<OutlinePiece>,
     ) {
         let st = prev.map(|op| op.stroke);
@@ -198,7 +182,6 @@ impl PhoneticTheory {
                         replace_previous: true,
                         is_prefix: false,
                         skip,
-                        syllable_node,
                     });
                 }
                 // also push the suffix as a standalone
@@ -207,7 +190,6 @@ impl PhoneticTheory {
                     replace_previous: false,
                     is_prefix: false,
                     skip,
-                    syllable_node,
                 })
             }
         }
@@ -243,7 +225,6 @@ impl PhoneticTheory {
         &self,
         prev: Option<OutlinePiece>,
         mut syllable: Syllable,
-        syllable_node: usize,
     ) -> Vec<OutlinePiece> {
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
         syllable.skip(prev_skip);
@@ -254,7 +235,6 @@ impl PhoneticTheory {
             replace_previous: true,
             is_prefix: false,
             skip: 0,
-            syllable_node,
         }];
         let mut next_outlines = Vec::new();
         for possible_chords in self.theory.onset_matches(syllable) {
@@ -419,7 +399,6 @@ struct OutlinePiece {
     replace_previous: bool,
     is_prefix: bool,
     skip: usize,
-    syllable_node: usize,
 }
 
 impl OutlinePiece {
