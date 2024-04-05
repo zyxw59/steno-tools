@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::{
     chord::{Chord, Outline},
     pronounce::{Phoneme, Pronunciation, PronunciationSlice, Stress},
-    tree::{Tree2 as Tree},
+    tree::Tree,
 };
 
 #[derive(Debug, Clone, Deserialize)]
