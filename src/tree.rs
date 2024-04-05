@@ -1,6 +1,4 @@
-#![allow(unused)]
-
-use std::{fmt, ops::Range};
+use std::fmt;
 
 use slab::Slab;
 
@@ -123,18 +121,6 @@ impl<T> Tree<T> {
             self.slab[key.0].prev_sibling = Some(prev_sibling);
         }
         key
-    }
-
-    pub fn remove(&mut self, key: TreeIdx) -> Option<T> {
-        self.remove_node(key).map(|node| node.value)
-    }
-
-    pub fn children(&self, idx: TreeIdx) -> ChildrenIter<'_, T> {
-        let current = self.slab[idx.0].first_child();
-        ChildrenIter {
-            tree: self,
-            current,
-        }
     }
 
     fn remove_node(&mut self, key: TreeIdx) -> Option<Node<T>> {
@@ -310,6 +296,7 @@ impl<'a, T> TreeRef<'a, T> {
         }
     }
 
+    #[cfg(test)]
     fn dfs_index_iter(self) -> DfsIndexIter<'a, T> {
         DfsIndexIter {
             tree: self,
@@ -334,6 +321,7 @@ impl<'a, T> TreeRef<'a, T> {
         self.roots.map(|(first, _)| first)
     }
 
+    #[cfg(test)]
     fn debug(self) -> DebugTreeRef<'a, T> {
         DebugTreeRef(self)
     }
@@ -491,13 +479,14 @@ impl<'tree, T> TreePaths<'tree, T> {
         })
     }
 
-    pub fn with_collect<C>(
+    pub fn with_collect_copied<C>(
         self,
     ) -> MappedTreePathsIter<'tree, T, impl for<'iter> FnMut(PathIter<'iter, 'tree, T>) -> C>
     where
-        C: FromIterator<&'tree T>,
+        T: Copy,
+        C: FromIterator<T>,
     {
-        self.with(|iter| iter.collect())
+        self.with(|iter| iter.copied().collect())
     }
 
     pub fn with<F, U>(self, func: F) -> MappedTreePathsIter<'tree, T, F>
