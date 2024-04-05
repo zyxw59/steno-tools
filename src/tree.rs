@@ -20,16 +20,14 @@ impl fmt::Debug for TreeIdx {
 }
 
 impl<T> Tree<T> {
-    pub fn build_with_leaf_validation<I, G, J, L>(
+    pub fn build_with_leaf_validation<I, J>(
         initials: I,
-        mut generator: G,
-        mut validator: L,
+        mut generator: impl FnMut(&T) -> J,
+        mut validator: impl FnMut(&T) -> bool,
     ) -> Self
     where
         I: IntoIterator<Item = T>,
-        G: FnMut(&T) -> J,
         J: IntoIterator<Item = T>,
-        L: FnMut(&T) -> bool,
     {
         let mut this = Self::new();
         for value in initials {
@@ -52,10 +50,7 @@ impl<T> Tree<T> {
         this
     }
 
-    pub fn contract<F, U>(self, mut contraction: F) -> Tree<U>
-    where
-        F: FnMut(&T, &T) -> U,
-    {
+    pub fn contract<U>(self, mut contraction: impl FnMut(&T, &T) -> U) -> Tree<U> {
         let mut first_root = None;
         let mut last_root = None;
         let slab = self
@@ -94,10 +89,7 @@ impl<T> Tree<T> {
         }
     }
 
-    pub fn map<F, U>(self, mut func: F) -> Tree<U>
-    where
-        F: FnMut(T) -> U,
-    {
+    pub fn map<U>(self, mut func: impl FnMut(T) -> U) -> Tree<U> {
         Tree {
             slab: self
                 .slab
@@ -248,10 +240,7 @@ impl<'a, T> TreeRef<'a, T> {
         }
     }
 
-    pub fn map<F, U>(self, mut func: F) -> Tree<U>
-    where
-        F: FnMut(&'a T) -> U,
-    {
+    pub fn map<U>(self, mut func: impl FnMut(&'a T) -> U) -> Tree<U> {
         Tree {
             slab: self
                 .slab
