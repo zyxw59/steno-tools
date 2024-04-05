@@ -12,7 +12,7 @@ use serde::Deserialize;
 use crate::{
     chord::{Chord, Outline},
     pronounce::{Phoneme, Pronunciation, PronunciationSlice, Stress},
-    tree::Tree,
+    tree::{Tree2 as Tree},
 };
 
 #[derive(Debug, Clone, Deserialize)]
@@ -55,22 +55,23 @@ impl PhoneticTheory {
             .map(From::from)
     }
 
-    fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> Tree<OutlinePiece> {
-        let syllables = self.phonology.syllable_tree(pronunciation);
-        Tree::build(
-            // initial strokes
-            syllables
-                .roots_with_indices()
-                .flat_map(|(idx, syllable)| self.outlines_for_syllable(None, *syllable, idx)),
-            |&prev| {
-                syllables
-                    .children_with_indices(prev.syllable_node)
-                    .flat_map(move |(idx, syllable)| {
-                        self.outlines_for_syllable(Some(prev), *syllable, idx)
-                    })
-            },
-        )
-    }
+    // fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> Tree<OutlinePiece> {
+    //     let syllables = self.phonology.syllable_tree(pronunciation);
+    //     Tree::build_with_leaf_validation(
+    //         // initial strokes
+    //         syllables
+    //             .roots_with_indices()
+    //             .flat_map(|(idx, syllable)| self.outlines_for_syllable(None, *syllable, idx)),
+    //         |&prev| {
+    //             syllables
+    //                 .children_with_indices(prev.syllable_node)
+    //                 .flat_map(move |(idx, syllable)| {
+    //                     self.outlines_for_syllable(Some(prev), *syllable, idx)
+    //                 })
+    //         },
+    //         |_| true,
+    //     )
+    // }
 
     fn outlines_for_syllable(
         &self,
@@ -1220,7 +1221,9 @@ mod tests {
         let mut tree = phonology.syllable_tree(&pronunciation);
         eprintln!("syllable tree: {tree:?}");
         let actual_syllables = tree
-            .all_paths_with(|path| path.map(ToString::to_string).join("/"))
+            .as_ref()
+            .paths()
+            .with(|path| path.map(ToString::to_string).join("/"))
             .collect::<Vec<_>>();
         assert_eq!(actual_syllables, expected_syllables);
         Ok(())
