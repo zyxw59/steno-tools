@@ -185,12 +185,7 @@ impl PhoneticTheory {
             }
             std::mem::swap(&mut possible_outlines, &mut next_outlines);
         }
-        // if possible_outlines.is_empty() {
-        //     return Err(anyhow::anyhow!(
-        //         "no strokes for onset {}",
-        //         PronunciationSlice(syllable.onset())
-        //     ));
-        // }
+
         for possible_chords in self.theory.vowel_matches(syllable) {
             for outline in possible_outlines.drain(..) {
                 let st = outline.stroke;
@@ -202,12 +197,7 @@ impl PhoneticTheory {
             }
             std::mem::swap(&mut possible_outlines, &mut next_outlines);
         }
-        // if possible_outlines.is_empty() {
-        //     return Err(anyhow::anyhow!(
-        //         "no strokes for vowel {}",
-        //         PronunciationSlice(syllable.vowel())
-        //     ));
-        // }
+
         for possible_chords in self.theory.coda_matches(syllable) {
             for outline in possible_outlines.drain(..) {
                 let st = outline.stroke;
@@ -219,12 +209,6 @@ impl PhoneticTheory {
             }
             std::mem::swap(&mut possible_outlines, &mut next_outlines);
         }
-        // if possible_outlines.is_empty() {
-        //     return Err(anyhow::anyhow!(
-        //         "no strokes for coda {}",
-        //         PronunciationSlice(syllable.coda())
-        //     ));
-        // }
         possible_outlines
     }
 }
