@@ -902,30 +902,14 @@ mod tests {
         Ok(())
     }
 
-    // #[test_case("S P UH T", &["S P UH T"] ; "one syllable")]
-    // #[test_case("EH P S AO L", &["EH P", "S AO L"] ; "vowel initial")]
-    // #[test_case("T AE L S P R AO T", &["T AE L", "S P R AO T"] ; "complex onset")]
-    // #[test_case("CH IH CH R EH K", &["CH IH CH", "R EH K"] ; "longer consonants")]
-    // #[test_case("T EY IH S", &["T EY", "EY IH S"] ; "consecutive vowels as linkers")]
-    // fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
-    //     let theory: PhoneticTheory =
-    //         serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
-    //     let phonology = theory.phonology;
-    //     let actual_syllables = phonology
-    //         .syllabize_word(&Pronunciation::from(word))?
-    //         .map(|s| s.to_string())
-    //         .collect::<Vec<_>>();
-
-    //     assert_eq!(actual_syllables, expected_syllables);
-    //     Ok(())
-    // }
-
+    #[test_case("S N UW1 T", &["S N UW1 T"] ; "snoot")]
+    #[test_case("S EY1 IH0 NG", &["S EY1/EY1 IH0 NG"] ; "saying")]
     #[test_case("L AH1 V AH0 B AH0 L", &[
         "L AH1 V/AH0 B AH0 L",
         "L AH1 V/AH0/B AH0 L",
         "L AH1/V AH0/B AH0 L",
     ] ; "loveable")]
-    fn syllabification_2(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
+    fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
         let phonology = theory.phonology;
