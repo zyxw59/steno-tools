@@ -945,7 +945,7 @@ mod tests {
     #[test_case("IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
     #[test_case("IH0 K S CH EY2 N JH", "KPHAEUFPBG" ; "exchange")]
     #[test_case("AE1 K SH AH0 N", "ABGS" ; "action")]
-    #[test_case("G AH1 M P SH AH0 N", "TKPW*UPLGS" ; "gumption")]
+    #[test_case("G AH1 M P SH AH0 N", "TKPWUFRPGS" ; "gumption")]
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
     #[test_case("D R AO1 IH0 NG", "TKRO/WEUPBG" ; "drawing")]
     fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
