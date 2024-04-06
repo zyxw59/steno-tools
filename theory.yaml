@@ -137,23 +137,30 @@ theory:
       - take_next: "S P"
         stress: ["None"]
         chords: ["KP"]
+        position: ["Initial"]
       - take_next: "S K"
         stress: ["None"]
         chords: ["KP"]
+        position: ["Initial"]
       - take_next: "S T"
         stress: ["None"]
         chords: ["KP"]
+        position: ["Initial"]
       - take_next: "S"
         stress: ["None"]
         chords: ["KP"]
+        position: ["Initial"]
     "IH K S":
       - take_next: "CH"
         stress: ["None"]
         chords: ["KPH"]
+        position: ["Initial"]
     "K AA N":
       - chords: ["K"]
+        position: ["Initial"]
     "K AO N":
       - chords: ["K"]
+        position: ["Initial"]
   suffixes:
     "K SH AH N":
       - stress: ["None"]
@@ -239,6 +246,7 @@ phonology:
       vowel: "AH"
       coda: ""
       stress: ["None"]
+      position: ["Medial"]
     - onset: "K SH"
       vowel: "AH"
       coda: "N"
@@ -247,3 +255,4 @@ phonology:
       vowel: "AH"
       coda: "N"
       stress: ["None"]
+      position: ["Medial", "Final"]

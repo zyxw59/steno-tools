@@ -5,7 +5,7 @@ use std::{
     rc::Rc,
 };
 
-use enumset::{EnumSetType, EnumSet};
+use enumset::{EnumSet, EnumSetType};
 use itertools::Itertools;
 use regex::{RegexSet, RegexSetBuilder};
 use serde::Deserialize;
@@ -399,6 +399,7 @@ struct SyllableRule {
     next: Option<Pronunciation>,
     take_next: Option<Pronunciation>,
     stress: Option<EnumSet<Stress>>,
+    position: Option<EnumSet<SyllablePosition>>,
     chords: Rc<[Chord]>,
 }
 
@@ -406,6 +407,7 @@ impl SyllableRule {
     fn matches(&self, syllable: Syllable<'_>) -> bool {
         [
             Self::matches_stress,
+            Self::matches_position,
             Self::matches_prev,
             Self::matches_next,
             Self::matches_take_next,
@@ -416,6 +418,10 @@ impl SyllableRule {
 
     fn matches_stress(&self, syllable: Syllable<'_>) -> Option<bool> {
         self.stress.map(|st| st.contains(syllable.indices.stress))
+    }
+
+    fn matches_position(&self, syllable: Syllable<'_>) -> Option<bool> {
+        self.position.map(|pos| pos.contains(syllable.position()))
     }
 
     fn matches_prev(&self, syllable: Syllable<'_>) -> Option<bool> {
@@ -608,8 +614,7 @@ struct MultiSyllable {
     vowel: Phoneme,
     coda: Pronunciation,
     stress: Option<EnumSet<Stress>>,
-    #[serde(default)]
-    positions: EnumSet<SyllablePosition>,
+    position: Option<EnumSet<SyllablePosition>>,
 }
 
 impl MultiSyllable {
@@ -630,20 +635,26 @@ impl MultiSyllable {
             let coda = vowel + 1;
             let end = coda + self.coda.len();
             let vowel_ph = &word[vowel];
+            let indices = SyllableIndices {
+                onset,
+                vowel,
+                coda,
+                stress: vowel_ph.stress(),
+            };
+            let position = SyllablePosition::new(onset == 0, end == word.len());
             if word[onset..vowel] == *self.onset
                 && vowel_ph == &self.vowel
-                && self.stress.map(|st| st.contains(vowel_ph.stress())).unwrap_or(true)
+                && self
+                    .stress
+                    .map(|st| st.contains(indices.stress))
+                    .unwrap_or(true)
+                && self
+                    .position
+                    .map(|pos| pos.contains(position))
+                    .unwrap_or(true)
                 && word[coda..end] == *self.coda
             {
-                return Some((
-                    SyllableIndices {
-                        onset,
-                        vowel,
-                        coda,
-                        stress: vowel_ph.stress(),
-                    },
-                    end,
-                ));
+                return Some((indices, end));
             }
         }
         None
@@ -657,6 +668,17 @@ enum SyllablePosition {
     Initial,
     Medial,
     Final,
+}
+
+impl SyllablePosition {
+    fn new(is_start: bool, is_end: bool) -> Self {
+        match (is_start, is_end) {
+            (true, true) => SyllablePosition::Only,
+            (true, false) => SyllablePosition::Initial,
+            (false, true) => SyllablePosition::Final,
+            (false, false) => SyllablePosition::Medial,
+        }
+    }
 }
 
 impl From<RawPhonology> for Phonology {
@@ -854,6 +876,10 @@ impl<'w> Syllable<'w> {
     /// Returns the part of the syllable after the specified index into the word.
     fn after_index(&self, index: usize) -> &'w [Phoneme] {
         &self.word[index..self.end]
+    }
+
+    fn position(&self) -> SyllablePosition {
+        SyllablePosition::new(self.indices.onset == 0, self.end == self.word.len())
     }
 }
 
