@@ -146,14 +146,15 @@ impl PhoneticTheory {
                         kind: OutlinePieceKind::Suffix,
                         skip,
                     });
+                } else {
+                    // if the suffix would conflict, push it as a standalone
+                    next_outlines.push(OutlinePiece {
+                        stroke: ch,
+                        replace_previous: false,
+                        kind: OutlinePieceKind::Suffix,
+                        skip,
+                    })
                 }
-                // also push the suffix as a standalone
-                next_outlines.push(OutlinePiece {
-                    stroke: ch,
-                    replace_previous: false,
-                    kind: OutlinePieceKind::Suffix,
-                    skip,
-                })
             }
         }
     }
