@@ -29,6 +29,8 @@ theory:
     "UH":
       - prev: "Y"
         chords: ["AOU"]
+      - next_broad: "L"
+        chords: ["U"]
       - chords: ["AO"]
     "IY": ["AOE"]
     "EY":
@@ -101,7 +103,7 @@ theory:
     "G": ["-G"]
     "K": ["-BG"]
     "L": ["-L"]
-    "M": ["-PL"]
+    "M": ["-PL", "-FR"]
     "N": ["-PB"]
     "P": ["-P"]
     "R": ["-R"]
@@ -127,7 +129,6 @@ theory:
     "N K": ["-PBG"]
     "NG K": ["-PBG"]
     "NG G": ["-PBG"]
-    "M P": ["*PL"]
     "L M": ["-PBL"]
     "L P": ["-P", "-PL"]
 
@@ -154,15 +155,18 @@ theory:
     "K AO N":
       - chords: ["K"]
   suffixes:
+    "K SH AH N":
+      - stress: None
+        chords: ["-BGS", "*BGS"]
     "SH AH N":
-      - prev: "K"
-        stress: None
-        chords: ["-S", "*S"]
       - stress: None
         chords: ["-GS", "*GS"]
     "SH AH S":
       - stress: None
         chords: ["-RBS", "*RBS"]
+    "AH":
+      - stress: None
+        chords: ["", "U"]
 
   spelling_conflicts:
     - chord: "AEU"
@@ -234,4 +238,12 @@ phonology:
     - onset: ""
       vowel: "AH"
       coda: ""
+      stress: None
+    - onset: "K SH"
+      vowel: "AH"
+      coda: "N"
+      stress: None
+    - onset: "SH"
+      vowel: "AH"
+      coda: "N"
       stress: None
