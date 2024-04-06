@@ -133,27 +133,25 @@ theory:
     "L P": ["-P", "-PL"]
 
   prefixes:
-    "IH K":
-      - take_next: "S P"
-        stress: ["None"]
-        chords: ["KP"]
-        position: ["Initial"]
-      - take_next: "S K"
-        stress: ["None"]
-        chords: ["KP"]
-        position: ["Initial"]
-      - take_next: "S T"
-        stress: ["None"]
-        chords: ["KP"]
-        position: ["Initial"]
-      - take_next: "S"
-        stress: ["None"]
-        chords: ["KP"]
-        position: ["Initial"]
     "IH K S":
+      - take_next: "P"
+        stress: ["None"]
+        chords: ["KP"]
+        position: ["Initial"]
+      - take_next: "K"
+        stress: ["None"]
+        chords: ["KP"]
+        position: ["Initial"]
+      - take_next: "T"
+        stress: ["None"]
+        chords: ["KP"]
+        position: ["Initial"]
       - take_next: "CH"
         stress: ["None"]
         chords: ["KPH"]
+        position: ["Initial"]
+      - stress: ["None"]
+        chords: ["KP"]
         position: ["Initial"]
     "K AA N":
       - chords: ["K"]
@@ -161,6 +159,12 @@ theory:
     "K AO N":
       - chords: ["K"]
         position: ["Initial"]
+    "D IH S":
+      - take_next: "T"
+        chords: ["STK"]
+      - take_next: "K"
+        chords: ["STK"]
+      - chords: ["STK"]
   suffixes:
     "K SH AH N":
       - stress: ["None"]
@@ -171,6 +175,14 @@ theory:
     "SH AH S":
       - stress: ["None"]
         chords: ["-RBS", "*RBS"]
+    "S AH Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-SZ"]
+    "S IH Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-SZ"]
     "AH":
       - stress: ["None"]
         chords: ["", "U"]
@@ -238,6 +250,14 @@ phonology:
   vowels: ["AH", "AA", "AO", "AE", "IH", "EH", "UH", "IY", "EY", "AY", "OY",
     "AW", "OW", "UW", "ER"]
   multi_syllables:
+    - onset: ""
+      vowel: "IH"
+      coda: "K S"
+      stress: ["None"]
+      position: ["Initial"]
+    - onset: "D"
+      vowel: "IH"
+      coda: "S"
     - onset: ""
       vowel: "AH"
       coda: "B AH L"

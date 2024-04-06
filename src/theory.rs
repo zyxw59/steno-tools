@@ -787,12 +787,15 @@ impl Phonology {
         start_at: usize,
         allow_coda: bool,
     ) -> impl Iterator<Item = (SyllableIndices, Option<usize>)> + Captures<(&'p (), &'w ())> {
-        let plain_syllable = self.syllabize_one(word, start_at);
+        let mut plain_syllable = self.syllabize_one(word, start_at);
         let end = if allow_coda {
             plain_syllable.coda
         } else {
             start_at + 1
         };
+        if !allow_coda {
+            plain_syllable.onset = plain_syllable.onset.max(start_at);
+        }
         let others = self.find_multisyllable(word, start_at..end);
         let plain_syllable_iter = if allow_coda || plain_syllable.onset == start_at {
             Some((plain_syllable, None))
@@ -942,6 +945,9 @@ mod tests {
 
     #[test_case("S N UW1 T", &["S N UW1 T"] ; "snoot")]
     #[test_case("S EY1 IH0 NG", &["S EY1/EY1 IH0 NG"] ; "saying")]
+    #[test_case("IH0 K S P EH2 N D", &["IH0 K S/P EH2 N D", "IH0 K/S P EH2 N D"]; "expend")]
+    #[test_case("IH0 K S CH EY2 N JH", &["IH0 K S/CH EY2 N JH", "IH0 K S/CH EY2 N JH"] ; "exchange")]
+    #[test_case("D IH1 S T AH0 N T", &["D IH1 S/T AH0 N T", "D IH1/S T AH0 N T"] ; "distant")]
     #[test_case("L AH1 V AH0 B AH0 L", &[
         "L AH1 V/AH0 B AH0 L",
         "L AH1 V/AH0/B AH0 L",
@@ -970,6 +976,7 @@ mod tests {
     #[test_case("M AE1 R IY0", "PHE/RAOE" ; "marry")]
     #[test_case("IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
     #[test_case("IH0 K S CH EY2 N JH", "KPHAEUFPBG" ; "exchange")]
+    #[test_case("D IH1 S T AH0 N T", "STKUPBT" ; "distant")]
     #[test_case("AE1 K SH AH0 N", "ABGS" ; "action")]
     #[test_case("G AH1 M P SH AH0 N", "TKPWUFRPGS" ; "gumption")]
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
@@ -978,7 +985,21 @@ mod tests {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
-        let actual_outline = theory.get_outline(&Pronunciation::from(pronunciation))?;
+        let outlines = theory.get_outline_tree(&Pronunciation::from(pronunciation));
+        let outline_tree = outlines.as_ref().map(|piece| {
+            if piece.replace_previous {
+                format!("(-){}", piece.stroke)
+            } else {
+                format!("{}", piece.stroke)
+            }
+        });
+        eprintln!("outlines: {outline_tree:?}");
+        let actual_outline = outlines
+            .as_ref()
+            .paths()
+            .with_collect_copied::<Outline>()
+            .next()
+            .expect("no outlines");
         assert_eq!(actual_outline, expected_outline);
         Ok(())
     }
