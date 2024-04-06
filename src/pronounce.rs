@@ -1,6 +1,7 @@
 use std::{cmp, collections::BTreeMap, fmt, io::BufRead, ops::Deref, rc::Rc};
 
 use anyhow::Context;
+use enumset::EnumSetType;
 use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 
@@ -174,7 +175,8 @@ impl Deref for Phoneme {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Ord, PartialOrd, EnumSetType, Deserialize, serde::Serialize)]
+#[enumset(serialize_repr = "list")]
 pub enum Stress {
     None,
     Secondary,

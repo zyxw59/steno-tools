@@ -2,7 +2,7 @@ theory:
   vowels:
     "AH":
       - prev: "Y"
-        stress: None
+        stress: ["None"]
         chords: ["AOU"]
       - chords: ["U"]
     "AA":
@@ -23,7 +23,7 @@ theory:
     "EH": ["E"]
     "ER":
       - prev: "Y"
-        stress: None
+        stress: ["None"]
         chords: ["AOUR"]
       - chords: ["UR"]
     "UH":
@@ -72,10 +72,10 @@ theory:
     "W": ["W"]
     "Y":
       - next: "AH"
-        stress: None
+        stress: ["None"]
         chords: [""]
       - next: "ER"
-        stress: None
+        stress: ["None"]
         chords: [""]
       - next: "UH"
         chords: [""]
@@ -135,20 +135,20 @@ theory:
   prefixes:
     "IH K":
       - take_next: "S P"
-        stress: None
+        stress: ["None"]
         chords: ["KP"]
       - take_next: "S K"
-        stress: None
+        stress: ["None"]
         chords: ["KP"]
       - take_next: "S T"
-        stress: None
+        stress: ["None"]
         chords: ["KP"]
       - take_next: "S"
-        stress: None
+        stress: ["None"]
         chords: ["KP"]
     "IH K S":
       - take_next: "CH"
-        stress: None
+        stress: ["None"]
         chords: ["KPH"]
     "K AA N":
       - chords: ["K"]
@@ -156,16 +156,16 @@ theory:
       - chords: ["K"]
   suffixes:
     "K SH AH N":
-      - stress: None
+      - stress: ["None"]
         chords: ["-BGS", "*BGS"]
     "SH AH N":
-      - stress: None
+      - stress: ["None"]
         chords: ["-GS", "*GS"]
     "SH AH S":
-      - stress: None
+      - stress: ["None"]
         chords: ["-RBS", "*RBS"]
     "AH":
-      - stress: None
+      - stress: ["None"]
         chords: ["", "U"]
 
   spelling_conflicts:
@@ -234,16 +234,16 @@ phonology:
     - onset: ""
       vowel: "AH"
       coda: "B AH L"
-      stress: None
+      stress: ["None"]
     - onset: ""
       vowel: "AH"
       coda: ""
-      stress: None
+      stress: ["None"]
     - onset: "K SH"
       vowel: "AH"
       coda: "N"
-      stress: None
+      stress: ["None"]
     - onset: "SH"
       vowel: "AH"
       coda: "N"
-      stress: None
+      stress: ["None"]

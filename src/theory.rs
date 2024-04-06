@@ -5,6 +5,7 @@ use std::{
     rc::Rc,
 };
 
+use enumset::{EnumSetType, EnumSet};
 use itertools::Itertools;
 use regex::{RegexSet, RegexSetBuilder};
 use serde::Deserialize;
@@ -346,7 +347,7 @@ struct OutputRule {
     prev_broad: Option<Pronunciation>,
     next: Option<Pronunciation>,
     next_broad: Option<Pronunciation>,
-    stress: Option<Stress>,
+    stress: Option<EnumSet<Stress>>,
     chords: Rc<[Chord]>,
 }
 
@@ -364,7 +365,7 @@ impl OutputRule {
     }
 
     fn matches_stress(&self, syllable: Syllable<'_>, _at: Range<usize>) -> Option<bool> {
-        self.stress.map(|st| st == syllable.indices.stress)
+        self.stress.map(|st| st.contains(syllable.indices.stress))
     }
 
     fn matches_prev(&self, syllable: Syllable<'_>, at: Range<usize>) -> Option<bool> {
@@ -397,7 +398,7 @@ struct SyllableRule {
     prev: Option<Pronunciation>,
     next: Option<Pronunciation>,
     take_next: Option<Pronunciation>,
-    stress: Option<Stress>,
+    stress: Option<EnumSet<Stress>>,
     chords: Rc<[Chord]>,
 }
 
@@ -414,7 +415,7 @@ impl SyllableRule {
     }
 
     fn matches_stress(&self, syllable: Syllable<'_>) -> Option<bool> {
-        self.stress.map(|st| st == syllable.indices.stress)
+        self.stress.map(|st| st.contains(syllable.indices.stress))
     }
 
     fn matches_prev(&self, syllable: Syllable<'_>) -> Option<bool> {
@@ -606,7 +607,9 @@ struct MultiSyllable {
     onset: Pronunciation,
     vowel: Phoneme,
     coda: Pronunciation,
-    stress: Stress,
+    stress: Option<EnumSet<Stress>>,
+    #[serde(default)]
+    positions: EnumSet<SyllablePosition>,
 }
 
 impl MultiSyllable {
@@ -629,7 +632,7 @@ impl MultiSyllable {
             let vowel_ph = &word[vowel];
             if word[onset..vowel] == *self.onset
                 && vowel_ph == &self.vowel
-                && vowel_ph.stress() == self.stress
+                && self.stress.map(|st| st.contains(vowel_ph.stress())).unwrap_or(true)
                 && word[coda..end] == *self.coda
             {
                 return Some((
@@ -637,7 +640,7 @@ impl MultiSyllable {
                         onset,
                         vowel,
                         coda,
-                        stress: self.stress,
+                        stress: vowel_ph.stress(),
                     },
                     end,
                 ));
@@ -645,6 +648,15 @@ impl MultiSyllable {
         }
         None
     }
+}
+
+#[derive(Debug, EnumSetType, Deserialize, serde::Serialize)]
+#[enumset(serialize_repr = "list")]
+enum SyllablePosition {
+    Only,
+    Initial,
+    Medial,
+    Final,
 }
 
 impl From<RawPhonology> for Phonology {
