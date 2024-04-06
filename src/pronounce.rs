@@ -109,7 +109,15 @@ impl fmt::Display for PronunciationSlice<'_> {
 
 impl fmt::Debug for PronunciationSlice<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Display::fmt(self, f)
+        f.write_str("\"")?;
+        if let Some((first, rest)) = self.0.split_first() {
+            f.write_str(first)?;
+            for ph in rest {
+                f.write_str(" ")?;
+                f.write_str(ph)?;
+            }
+        }
+        f.write_str("\"")
     }
 }
 

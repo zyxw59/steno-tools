@@ -12,6 +12,7 @@ use serde::Deserialize;
 use crate::{
     chord::{Chord, Outline},
     pronounce::{Phoneme, Pronunciation, PronunciationSlice, Stress},
+    tree::Tree,
 };
 
 #[derive(Debug, Clone, Deserialize)]
@@ -21,29 +22,11 @@ pub struct PhoneticTheory {
 }
 
 impl PhoneticTheory {
-    fn get_outlines(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Vec<OutlineBuilder>> {
-        let mut possible_outlines = vec![OutlineBuilder::default()];
-        for syllable in self.phonology.syllabize_word(pronunciation)? {
-            let mut next_outlines = Vec::new();
-            self.prefixes_for_syllable(syllable, &possible_outlines, &mut next_outlines);
-            self.suffixes_for_syllable(syllable, &possible_outlines, &mut next_outlines);
-
-            let res = self.write_outs_for_syllable(syllable, &mut possible_outlines);
-            next_outlines.extend(possible_outlines.drain(..).map(OutlineBuilder::push_empty));
-            if next_outlines.is_empty() {
-                res?;
-            }
-            possible_outlines = next_outlines;
-        }
-        // if an outline has a non-empty last_stroke, that means it ends in a prefix, which is not
-        // valid; skip those outlines
-        possible_outlines.retain(|outline| outline.last_stroke.is_empty());
-        Ok(possible_outlines)
-    }
-
     pub fn get_outline(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Outline> {
-        self.get_outlines(pronunciation)?
-            .into_iter()
+        self.get_outline_tree(pronunciation)
+            .as_ref()
+            .paths()
+            .with_collect_copied()
             .next()
             .ok_or_else(|| {
                 anyhow::anyhow!(
@@ -51,7 +34,26 @@ impl PhoneticTheory {
                     PronunciationSlice(pronunciation)
                 )
             })
-            .map(From::from)
+    }
+
+    fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> Tree<OutlinePiece> {
+        let syllables = self.phonology.syllable_tree(pronunciation);
+        syllables.as_ref().multi_map(|syllable, prev_stroke| {
+            self.outlines_for_syllable(prev_stroke.copied(), *syllable)
+        })
+    }
+
+    fn outlines_for_syllable(
+        &self,
+        prev: Option<OutlinePiece>,
+        syllable: Syllable,
+    ) -> impl IntoIterator<Item = OutlinePiece> {
+        let mut next_outlines = Vec::new();
+        self.prefixes_for_syllable(prev, syllable, &mut next_outlines);
+        self.suffixes_for_syllable(prev, syllable, &mut next_outlines);
+
+        next_outlines.extend(self.write_outs_for_syllable(prev, syllable));
+        next_outlines
     }
 
     pub fn disambiguate_phonetic(
@@ -60,9 +62,13 @@ impl PhoneticTheory {
         pron_1: &[Phoneme],
         pron_2: &[Phoneme],
     ) -> Option<(Outline, Outline)> {
-        let outlines_1 = self.get_outlines(pron_1).ok()?;
-        let outlines_2 = self.get_outlines(pron_2).ok()?;
-        disambiguate_iters(outline, outlines_1, outlines_2)
+        let outlines_1 = self.get_outline_tree(pron_1);
+        let outlines_2 = self.get_outline_tree(pron_2);
+        disambiguate_iters(
+            outline,
+            outlines_1.as_ref().paths().with_collect_copied::<Outline>(),
+            outlines_2.as_ref().paths().with_collect_copied::<Outline>(),
+        )
     }
 
     pub fn disambiguate_spelling(
@@ -94,42 +100,60 @@ impl PhoneticTheory {
 
     fn prefixes_for_syllable(
         &self,
+        prev: Option<OutlinePiece>,
         syllable: Syllable,
-        possible_outlines: &[OutlineBuilder],
-        next_outlines: &mut Vec<OutlineBuilder>,
+        next_outlines: &mut Vec<OutlinePiece>,
     ) {
-        for outline in possible_outlines {
-            let st = outline.last_stroke;
-            let (chords, skip) = self.theory.get_prefix(syllable, outline.skip);
-            for &ch in chords {
-                if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                    next_outlines.push(outline.with_stroke_and_skip(st | ch, skip))
+        let st = prev.and_then(|op| op.is_prefix().then_some(op.stroke));
+        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        let (chords, skip) = self.theory.get_prefix(syllable, prev_skip);
+        for &ch in chords {
+            if let Some(st) = st {
+                if (st & ch).is_empty() && st.before_ignore_star(ch) {
+                    next_outlines.push(OutlinePiece {
+                        stroke: st | ch,
+                        replace_previous: true,
+                        kind: OutlinePieceKind::Prefix,
+                        skip,
+                    })
                 }
+            } else {
+                next_outlines.push(OutlinePiece {
+                    stroke: ch,
+                    replace_previous: false,
+                    kind: OutlinePieceKind::Prefix,
+                    skip,
+                })
             }
         }
     }
 
     fn suffixes_for_syllable(
         &self,
+        prev: Option<OutlinePiece>,
         syllable: Syllable,
-        possible_outlines: &[OutlineBuilder],
-        next_outlines: &mut Vec<OutlineBuilder>,
+        next_outlines: &mut Vec<OutlinePiece>,
     ) {
-        for mut outline in possible_outlines {
-            // skip over empty outlines
-            if outline.last_stroke.is_empty() {
-                if let Some(prev) = outline.rest.as_deref() {
-                    outline = prev;
+        let st = prev.map(|op| op.stroke);
+        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        let (chords, skip) = self.theory.get_suffix(syllable, prev_skip);
+        for &ch in chords {
+            if let Some(st) = st {
+                if (st & ch).is_empty() && st.before_ignore_star(ch) {
+                    next_outlines.push(OutlinePiece {
+                        stroke: st | ch,
+                        replace_previous: true,
+                        kind: OutlinePieceKind::Suffix,
+                        skip,
+                    });
                 } else {
-                    // if the only outline is empty, it means we're at the start of the word
-                    continue;
-                }
-            }
-            let st = outline.last_stroke;
-            let (chords, skip) = self.theory.get_suffix(syllable, outline.skip);
-            for &ch in chords {
-                if (st & ch).is_empty() & st.before_ignore_star(ch) {
-                    next_outlines.push(outline.with_stroke(st | ch).push_empty_with_skip(skip));
+                    // if the suffix would conflict, push it as a standalone
+                    next_outlines.push(OutlinePiece {
+                        stroke: ch,
+                        replace_previous: false,
+                        kind: OutlinePieceKind::Suffix,
+                        skip,
+                    })
                 }
             }
         }
@@ -137,74 +161,55 @@ impl PhoneticTheory {
 
     fn write_outs_for_syllable(
         &self,
-        syllable: Syllable,
-        possible_outlines: &mut Vec<OutlineBuilder>,
-    ) -> anyhow::Result<()> {
+        prev: Option<OutlinePiece>,
+        mut syllable: Syllable,
+    ) -> Vec<OutlinePiece> {
+        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        syllable.skip(prev_skip);
+        let st = prev.and_then(|op| op.is_prefix().then_some(op.stroke));
+        let mut possible_outlines = vec![OutlinePiece {
+            stroke: st.unwrap_or_default(),
+            replace_previous: st.is_some(),
+            kind: OutlinePieceKind::WriteOut,
+            skip: 0,
+        }];
         let mut next_outlines = Vec::new();
         for possible_chords in self.theory.onset_matches(syllable) {
             for outline in possible_outlines.drain(..) {
-                if outline.skip > 0 {
-                    next_outlines.push(outline.decrement_skip());
-                    continue;
-                }
-                let st = outline.last_stroke;
+                let st = outline.stroke;
                 for &ch in possible_chords {
-                    if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                    if (st & ch).is_empty() && st.before_ignore_star(ch) {
                         next_outlines.push(outline.with_stroke(st | ch))
                     }
                 }
             }
-            std::mem::swap(possible_outlines, &mut next_outlines);
+            std::mem::swap(&mut possible_outlines, &mut next_outlines);
         }
-        if possible_outlines.is_empty() {
-            return Err(anyhow::anyhow!(
-                "no strokes for onset {}",
-                PronunciationSlice(syllable.onset())
-            ));
-        }
+
         for possible_chords in self.theory.vowel_matches(syllable) {
             for outline in possible_outlines.drain(..) {
-                if outline.skip > 0 {
-                    next_outlines.push(outline.decrement_skip());
-                    continue;
-                }
-                let st = outline.last_stroke;
+                let st = outline.stroke;
                 for &ch in possible_chords {
-                    if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                    if (st & ch).is_empty() && st.before_ignore_star(ch) {
                         next_outlines.push(outline.with_stroke(st | ch))
                     }
                 }
             }
-            std::mem::swap(possible_outlines, &mut next_outlines);
+            std::mem::swap(&mut possible_outlines, &mut next_outlines);
         }
-        if possible_outlines.is_empty() {
-            return Err(anyhow::anyhow!(
-                "no strokes for vowel {}",
-                PronunciationSlice(syllable.vowel())
-            ));
-        }
+
         for possible_chords in self.theory.coda_matches(syllable) {
             for outline in possible_outlines.drain(..) {
-                if outline.skip > 0 {
-                    next_outlines.push(outline.decrement_skip());
-                    continue;
-                }
-                let st = outline.last_stroke;
+                let st = outline.stroke;
                 for &ch in possible_chords {
-                    if (st & ch).is_empty() & st.before_ignore_star(ch) {
+                    if (st & ch).is_empty() && st.before_ignore_star(ch) {
                         next_outlines.push(outline.with_stroke(st | ch))
                     }
                 }
             }
-            std::mem::swap(possible_outlines, &mut next_outlines);
+            std::mem::swap(&mut possible_outlines, &mut next_outlines);
         }
-        if possible_outlines.is_empty() {
-            return Err(anyhow::anyhow!(
-                "no strokes for coda {}",
-                PronunciationSlice(syllable.coda())
-            ));
-        }
-        Ok(())
+        possible_outlines
     }
 }
 
@@ -237,117 +242,47 @@ where
     None
 }
 
-struct OutlineBuilder {
-    last_stroke: Chord,
-    rest: Option<Rc<OutlineBuilder>>,
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+struct OutlinePiece {
+    stroke: Chord,
+    replace_previous: bool,
+    kind: OutlinePieceKind,
     skip: usize,
-    len: usize,
 }
 
-impl OutlineBuilder {
-    fn with_stroke(&self, new_stroke: Chord) -> Self {
-        OutlineBuilder {
-            last_stroke: new_stroke,
-            rest: self.rest.clone(),
-            skip: 0,
-            len: self.len,
-        }
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum OutlinePieceKind {
+    Prefix,
+    Suffix,
+    WriteOut,
+}
+
+impl OutlinePiece {
+    fn is_prefix(self) -> bool {
+        self.kind == OutlinePieceKind::Prefix
     }
 
-    fn with_stroke_and_skip(&self, new_stroke: Chord, skip: usize) -> Self {
-        OutlineBuilder {
-            last_stroke: new_stroke,
-            rest: self.rest.clone(),
-            skip,
-            len: self.len,
-        }
+    fn with_stroke(self, stroke: Chord) -> Self {
+        Self { stroke, ..self }
     }
+}
 
-    fn decrement_skip(self) -> Self {
-        Self {
-            skip: self.skip - 1,
-            ..self
-        }
-    }
-
-    fn push_empty(self) -> Self {
-        self.push_empty_with_skip(0)
-    }
-
-    fn push_empty_with_skip(self, skip: usize) -> Self {
-        if self.last_stroke.is_empty() {
-            Self {
-                skip: self.skip + skip,
-                ..self
-            }
-        } else {
-            Self {
-                last_stroke: Chord::empty(),
-                len: self.len + 1,
-                skip,
-                rest: Some(Rc::new(self)),
+impl FromIterator<OutlinePiece> for Outline {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = OutlinePiece>,
+    {
+        let mut outline = Vec::new();
+        for piece in iter {
+            if piece.replace_previous {
+                *outline
+                    .last_mut()
+                    .expect("replace_previous set for initial stroke") = piece.stroke;
+            } else {
+                outline.push(piece.stroke)
             }
         }
-    }
-}
-
-impl From<OutlineBuilder> for Outline {
-    fn from(builder: OutlineBuilder) -> Outline {
-        let mut strokes = builder
-            .into_iter()
-            .filter(|stroke| !stroke.is_empty())
-            .collect::<Vec<Chord>>();
-        strokes.reverse();
-        strokes.into()
-    }
-}
-
-impl IntoIterator for OutlineBuilder {
-    type IntoIter = OutlineBuilderIter;
-
-    type Item = Chord;
-
-    fn into_iter(self) -> Self::IntoIter {
-        OutlineBuilderIter {
-            outline: Some(Rc::new(self)),
-        }
-    }
-}
-
-impl Default for OutlineBuilder {
-    fn default() -> Self {
-        Self {
-            last_stroke: Chord::empty(),
-            rest: None,
-            skip: 0,
-            len: 1,
-        }
-    }
-}
-
-struct OutlineBuilderIter {
-    outline: Option<Rc<OutlineBuilder>>,
-}
-
-impl Iterator for OutlineBuilderIter {
-    type Item = Chord;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let outline = self.outline.take()?;
-        let item = outline.last_stroke;
-        self.outline = outline.rest.clone();
-        Some(item)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let len = self.len();
-        (len, Some(len))
-    }
-}
-
-impl ExactSizeIterator for OutlineBuilderIter {
-    fn len(&self) -> usize {
-        self.outline.as_ref().map_or(0, |outline| outline.len)
+        outline.into()
     }
 }
 
@@ -656,12 +591,60 @@ pub struct RawPhonology {
     onset_singles: BTreeSet<Phoneme>,
     onset_clusters: Vec<OnsetCluster>,
     vowels: BTreeSet<Phoneme>,
+    #[serde(default)]
+    multi_syllables: Vec<MultiSyllable>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 struct OnsetCluster {
     first: BTreeSet<Phoneme>,
     second: BTreeSet<Phoneme>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
+struct MultiSyllable {
+    onset: Pronunciation,
+    vowel: Phoneme,
+    coda: Pronunciation,
+    stress: Stress,
+}
+
+impl MultiSyllable {
+    fn len(&self) -> usize {
+        self.onset.len() + 1 + self.coda.len()
+    }
+
+    fn find(
+        &self,
+        word: &[Phoneme],
+        starting_range: Range<usize>,
+    ) -> Option<(SyllableIndices, usize)> {
+        for onset in starting_range {
+            if onset + self.len() > word.len() {
+                break;
+            }
+            let vowel = onset + self.onset.len();
+            let coda = vowel + 1;
+            let end = coda + self.coda.len();
+            let vowel_ph = &word[vowel];
+            if word[onset..vowel] == *self.onset
+                && vowel_ph == &self.vowel
+                && vowel_ph.stress() == self.stress
+                && word[coda..end] == *self.coda
+            {
+                return Some((
+                    SyllableIndices {
+                        onset,
+                        vowel,
+                        coda,
+                        stress: self.stress,
+                    },
+                    end,
+                ));
+            }
+        }
+        None
+    }
 }
 
 impl From<RawPhonology> for Phonology {
@@ -680,6 +663,7 @@ impl From<RawPhonology> for Phonology {
             onset_singles: raw.onset_singles,
             onset_clusters,
             vowels: raw.vowels,
+            multi_syllables: raw.multi_syllables,
         }
     }
 }
@@ -690,29 +674,10 @@ pub struct Phonology {
     onset_singles: BTreeSet<Phoneme>,
     onset_clusters: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
     vowels: BTreeSet<Phoneme>,
+    multi_syllables: Vec<MultiSyllable>,
 }
 
 impl Phonology {
-    #[allow(unused)]
-    pub fn syllabize_word<'p, 'w>(
-        &'p self,
-        word: &'w [Phoneme],
-    ) -> anyhow::Result<SyllableIterator<'p, 'w>> {
-        let prev_syllable = self.syllabize_one(word, 0);
-        if prev_syllable.onset != 0 {
-            return Err(anyhow::anyhow!(
-                "invalid onset: {}",
-                PronunciationSlice(&word[..prev_syllable.vowel])
-            ));
-        }
-
-        Ok(SyllableIterator {
-            phonology: self,
-            word,
-            prev_syllable,
-        })
-    }
-
     fn syllabize_one(&self, word: &[Phoneme], start_at: usize) -> SyllableIndices {
         // find the first vowel
         let Some(mut vowel) = word[start_at..]
@@ -750,10 +715,76 @@ impl Phonology {
             coda,
         }
     }
+
+    fn syllable_tree<'w>(&self, word: &'w [Phoneme]) -> Tree<Syllable<'w>> {
+        let half_syllable_tree = Tree::build_with_leaf_validation(
+            self.get_initial_syllables(word),
+            |(prev, end)| {
+                if prev.onset == word.len() {
+                    None
+                } else {
+                    Some(self.get_next_syllables(word, end.unwrap_or(prev.coda), end.is_none()))
+                }
+                .into_iter()
+                .flatten()
+            },
+            |(prev, _end)| prev.onset == word.len(),
+        );
+        half_syllable_tree.contract(|(prev, end), (next, _)| {
+            let end = end.unwrap_or(prev.coda.max(next.onset));
+            Syllable {
+                word,
+                indices: *prev,
+                end,
+            }
+        })
+    }
+
+    fn get_initial_syllables<'p, 'w>(
+        &'p self,
+        word: &'w [Phoneme],
+    ) -> impl Iterator<Item = (SyllableIndices, Option<usize>)> + Captures<(&'p (), &'w ())> {
+        self.get_next_syllables(word, 0, false)
+    }
+
+    fn get_next_syllables<'p, 'w>(
+        &'p self,
+        word: &'w [Phoneme],
+        start_at: usize,
+        allow_coda: bool,
+    ) -> impl Iterator<Item = (SyllableIndices, Option<usize>)> + Captures<(&'p (), &'w ())> {
+        let plain_syllable = self.syllabize_one(word, start_at);
+        let end = if allow_coda {
+            plain_syllable.coda
+        } else {
+            start_at + 1
+        };
+        let others = self.find_multisyllable(word, start_at..end);
+        let plain_syllable_iter = if allow_coda || plain_syllable.onset == start_at {
+            Some((plain_syllable, None))
+        } else {
+            None
+        };
+        others.chain(plain_syllable_iter)
+    }
+
+    fn find_multisyllable<'p, 'w>(
+        &'p self,
+        word: &'w [Phoneme],
+        starting_range: Range<usize>,
+    ) -> impl Iterator<Item = (SyllableIndices, Option<usize>)> + Captures<(&'p (), &'w ())> {
+        self.multi_syllables
+            .iter()
+            .filter_map(move |multi| multi.find(word, starting_range.clone()))
+            .map(|(si, end)| (si, Some(end)))
+    }
 }
 
+trait Captures<U> {}
+impl<T: ?Sized, U> Captures<U> for T {}
+
 /// Start indices of the onset, vowel, and coda of a syllable
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 struct SyllableIndices {
     stress: Stress,
     onset: usize,
@@ -761,7 +792,17 @@ struct SyllableIndices {
     coda: usize,
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+impl fmt::Debug for SyllableIndices {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}..{}..{} ({:?})",
+            self.onset, self.vowel, self.coda, self.stress
+        )
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub struct Syllable<'w> {
     word: &'w [Phoneme],
     indices: SyllableIndices,
@@ -769,24 +810,12 @@ pub struct Syllable<'w> {
 }
 
 impl<'w> Syllable<'w> {
-    pub fn onset(&self) -> &'w [Phoneme] {
-        &self.word[self.onset_range()]
-    }
-
     fn onset_range(&self) -> Range<usize> {
         self.indices.onset..self.indices.vowel
     }
 
-    pub fn vowel(&self) -> &'w [Phoneme] {
-        &self.word[self.vowel_range()]
-    }
-
     fn vowel_range(&self) -> Range<usize> {
         self.indices.vowel..self.indices.coda
-    }
-
-    pub fn coda(&self) -> &'w [Phoneme] {
-        &self.word[self.coda_range()]
     }
 
     fn coda_range(&self) -> Range<usize> {
@@ -795,6 +824,14 @@ impl<'w> Syllable<'w> {
 
     pub fn as_slice(&self) -> &'w [Phoneme] {
         &self.word[self.indices.onset..self.end]
+    }
+
+    /// Skips the first `skip` phonemes of the syllable
+    fn skip(&mut self, skip: usize) {
+        self.indices.onset += skip;
+        self.indices.vowel = self.indices.vowel.max(self.indices.onset);
+        self.indices.coda = self.indices.coda.max(self.indices.onset);
+        self.end = self.end.max(self.indices.onset);
     }
 
     /// Returns the part of the syllable up to the specified index into the word.
@@ -811,6 +848,12 @@ impl<'w> Syllable<'w> {
 impl fmt::Display for Syllable<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(&PronunciationSlice(self.as_slice()), f)
+    }
+}
+
+impl fmt::Debug for Syllable<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Debug::fmt(&PronunciationSlice(self.as_slice()), f)
     }
 }
 
@@ -846,6 +889,7 @@ impl<'p, 'w> Iterator for SyllableIterator<'p, 'w> {
 mod tests {
     use std::{fs::File, io::BufReader};
 
+    use itertools::Itertools;
     use test_case::test_case;
 
     use super::{PhoneticTheory, Pronunciation};
@@ -858,20 +902,25 @@ mod tests {
         Ok(())
     }
 
-    #[test_case("S P UH T", &["S P UH T"] ; "one syllable")]
-    #[test_case("EH P S AO L", &["EH P", "S AO L"] ; "vowel initial")]
-    #[test_case("T AE L S P R AO T", &["T AE L", "S P R AO T"] ; "complex onset")]
-    #[test_case("CH IH CH R EH K", &["CH IH CH", "R EH K"] ; "longer consonants")]
-    #[test_case("T EY IH S", &["T EY", "EY IH S"] ; "consecutive vowels as linkers")]
+    #[test_case("S N UW1 T", &["S N UW1 T"] ; "snoot")]
+    #[test_case("S EY1 IH0 NG", &["S EY1/EY1 IH0 NG"] ; "saying")]
+    #[test_case("L AH1 V AH0 B AH0 L", &[
+        "L AH1 V/AH0 B AH0 L",
+        "L AH1 V/AH0/B AH0 L",
+        "L AH1/V AH0/B AH0 L",
+    ] ; "loveable")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
         let phonology = theory.phonology;
-        let actual_syllables = phonology
-            .syllabize_word(&Pronunciation::from(word))?
-            .map(|s| s.to_string())
+        let pronunciation = Pronunciation::from(word);
+        let tree = phonology.syllable_tree(&pronunciation);
+        eprintln!("syllable tree: {tree:?}");
+        let actual_syllables = tree
+            .as_ref()
+            .paths()
+            .with(|path| path.map(ToString::to_string).join("/"))
             .collect::<Vec<_>>();
-
         assert_eq!(actual_syllables, expected_syllables);
         Ok(())
     }

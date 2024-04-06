@@ -226,3 +226,12 @@ phonology:
       second: ["Y"]
   vowels: ["AH", "AA", "AO", "AE", "IH", "EH", "UH", "IY", "EY", "AY", "OY",
     "AW", "OW", "UW", "ER"]
+  multi_syllables:
+    - onset: ""
+      vowel: "AH"
+      coda: "B AH L"
+      stress: None
+    - onset: ""
+      vowel: "AH"
+      coda: ""
+      stress: None
