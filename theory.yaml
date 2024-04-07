@@ -81,7 +81,7 @@ theory:
     "SH": ["SH"]
     "T": ["T"]
     "TH": ["TH"]
-    "V": ["SPW"]
+    "V": ["SPW", "W"]
     "W": ["W"]
     "Y":
       - next: "AH"
@@ -267,6 +267,8 @@ phonology:
       second: ["L"]
     - first: ["P", "B", "T", "D", "K", "G"]
       second: ["R", "W"]
+    - first: ["K"]
+      second: ["V"]
     # Allow voicless fricative, 'z', or 'v' plus approximant other than 'j'.
     - first: ["F", "S", "Z"]
       second: ["L"]
