@@ -104,6 +104,7 @@ theory:
     "HH W": ["WH"]
     "B W": ["PW"]
     "G W": ["TKPW"]
+    "V W": ["W"]
     "N Y":
       - next: "AH"
         stress: ["None"]
