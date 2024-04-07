@@ -98,6 +98,8 @@ theory:
     "Z": ["STK", "S*"]
     "ZH": ["SKH"]
     "HH W": ["WH"]
+    "B W": ["PW"]
+    "G W": ["TKPW"]
     "N Y":
       - next: "AH"
         stress: ["None"]
