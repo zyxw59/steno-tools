@@ -27,6 +27,8 @@ theory:
         chords: ["AOUR"]
       - next: "CH"
         chords: ["U"]
+      - next: "F"
+        chords: ["U"]
       - next: "V"
         chords: ["U"]
       - chords: ["UR"]
@@ -118,7 +120,10 @@ theory:
     "B": ["-B"]
     "D": ["-D"]
     "JH": ["-PBLG"]
-    "F": ["-F"]
+    "F":
+      - prev: "ER"
+        chords: ["*FRB"]
+      - chords: ["-F"]
     "G": ["-G"]
     "K": ["-BG", "*G"]
     "L": ["-L"]
@@ -150,6 +155,7 @@ theory:
     "L F": ["-FL"]
     "L V": ["-FL"]
     "R V": ["-FRB"]
+    "R F": ["*FRB"]
     "S T": ["-FT", "*S"]
     "K S T": ["-GT"]
     "D S T": ["-DZ"]
