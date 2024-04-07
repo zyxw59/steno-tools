@@ -115,7 +115,6 @@ impl PhoneticTheory {
         };
         let (chords, skip) = self.theory.get_prefix(syllable, prev_skip);
         for &ch in chords {
-            let ch = ch | prev_linker; // TODO: what if it conflicts?
             if let Some(st) = st {
                 if (st & ch).is_empty() && st.before_ignore_star(ch) {
                     next_outlines.push(OutlinePiece {
@@ -128,7 +127,7 @@ impl PhoneticTheory {
                 }
             } else {
                 next_outlines.push(OutlinePiece {
-                    stroke: ch,
+                    stroke: ch | prev_linker, // TODO what if the linker would conflict,
                     linker,
                     replace_previous: false,
                     kind: OutlinePieceKind::Prefix,
