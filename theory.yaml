@@ -159,6 +159,7 @@ theory:
     "NG G": ["-PBG"]
     "L M": ["-PBL"]
     "L P": ["-P", "-PL"]
+    "M F": ["-RPL"]
 
   prefixes:
     "IH K S":
