@@ -105,14 +105,21 @@ impl PhoneticTheory {
         syllable: Syllable,
         next_outlines: &mut Vec<OutlinePiece>,
     ) {
+        let linker = self.theory.get_linker(syllable);
         let st = prev.and_then(|op| op.is_prefix().then_some(op.stroke));
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        let prev_linker = if syllable.onset_range().is_empty() {
+            prev.map(|piece| piece.linker).unwrap_or_default()
+        } else {
+            Chord::empty()
+        };
         let (chords, skip) = self.theory.get_prefix(syllable, prev_skip);
         for &ch in chords {
             if let Some(st) = st {
                 if (st & ch).is_empty() && st.before_ignore_star(ch) {
                     next_outlines.push(OutlinePiece {
                         stroke: st | ch,
+                        linker,
                         replace_previous: true,
                         kind: OutlinePieceKind::Prefix,
                         skip,
@@ -120,7 +127,8 @@ impl PhoneticTheory {
                 }
             } else {
                 next_outlines.push(OutlinePiece {
-                    stroke: ch,
+                    stroke: ch | prev_linker, // TODO what if the linker would conflict,
+                    linker,
                     replace_previous: false,
                     kind: OutlinePieceKind::Prefix,
                     skip,
@@ -135,14 +143,21 @@ impl PhoneticTheory {
         syllable: Syllable,
         next_outlines: &mut Vec<OutlinePiece>,
     ) {
+        let linker = self.theory.get_linker(syllable);
         let st = prev.map(|op| op.stroke);
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        let prev_linker = if syllable.onset_range().is_empty() {
+            prev.map(|piece| piece.linker).unwrap_or_default()
+        } else {
+            Chord::empty()
+        };
         let (chords, skip) = self.theory.get_suffix(syllable, prev_skip);
         for &ch in chords {
             if let Some(st) = st {
                 if (st & ch).is_empty() && st.before_ignore_star(ch) {
                     next_outlines.push(OutlinePiece {
                         stroke: st | ch,
+                        linker,
                         replace_previous: true,
                         kind: OutlinePieceKind::Suffix,
                         skip,
@@ -150,7 +165,8 @@ impl PhoneticTheory {
                 } else {
                     // if the suffix would conflict, push it as a standalone
                     next_outlines.push(OutlinePiece {
-                        stroke: ch,
+                        stroke: ch | prev_linker, // TODO what if the linker would conflict
+                        linker,
                         replace_previous: false,
                         kind: OutlinePieceKind::Suffix,
                         skip,
@@ -165,11 +181,18 @@ impl PhoneticTheory {
         prev: Option<OutlinePiece>,
         mut syllable: Syllable,
     ) -> Vec<OutlinePiece> {
+        let linker = self.theory.get_linker(syllable);
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
         syllable.skip(prev_skip);
         let st = prev.and_then(|op| op.is_prefix().then_some(op.stroke));
+        let prev_linker = if syllable.onset_range().is_empty() {
+            prev.map(|piece| piece.linker).unwrap_or_default()
+        } else {
+            Chord::empty()
+        };
         let mut possible_outlines = vec![OutlinePiece {
-            stroke: st.unwrap_or_default(),
+            stroke: st.unwrap_or(prev_linker),
+            linker,
             replace_previous: st.is_some(),
             kind: OutlinePieceKind::WriteOut,
             skip: 0,
@@ -246,6 +269,7 @@ where
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 struct OutlinePiece {
     stroke: Chord,
+    linker: Chord,
     replace_previous: bool,
     kind: OutlinePieceKind,
     skip: usize,
@@ -292,6 +316,8 @@ pub struct Theory {
     onsets: PronunciationMap<OutputRules>,
     vowels: PronunciationMap<OutputRules>,
     codas: PronunciationMap<OutputRules>,
+    #[serde(default)]
+    linkers: BTreeMap<Phoneme, Chord>,
     #[serde(default)]
     prefixes: PronunciationMap<Rc<[SyllableRule]>>,
     #[serde(default)]
@@ -549,6 +575,14 @@ impl Theory {
             .map(SyllableRule::chords_and_skip)
             .unwrap_or((&[], 0))
     }
+
+    fn get_linker(&self, syllable: Syllable) -> Chord {
+        if syllable.coda_range().is_empty() {
+            self.linkers.get(syllable.vowel()).copied().unwrap_or_default()
+        } else {
+            Chord::empty()
+        }
+    }
 }
 
 struct MatchChordIter<'t, 'w> {
@@ -731,7 +765,7 @@ impl Phonology {
         // work backwards to find the maximally valid onset
         let mut allowed_phonemes = &self.onset_singles;
         let empty_set = BTreeSet::new();
-        let onset = word[..vowel]
+        let onset = word[start_at..vowel]
             .iter()
             .rposition(|ph| {
                 if !allowed_phonemes.contains(ph) {
@@ -740,8 +774,8 @@ impl Phonology {
                 allowed_phonemes = self.onset_clusters.get(ph).unwrap_or(&empty_set);
                 false
             })
-            .map(|idx| idx + 1)
-            .unwrap_or(0);
+            .map(|idx| idx + 1 + start_at)
+            .unwrap_or(start_at);
         SyllableIndices {
             stress,
             onset,
@@ -787,15 +821,12 @@ impl Phonology {
         start_at: usize,
         allow_coda: bool,
     ) -> impl Iterator<Item = (SyllableIndices, Option<usize>)> + Captures<(&'p (), &'w ())> {
-        let mut plain_syllable = self.syllabize_one(word, start_at);
+        let plain_syllable = self.syllabize_one(word, start_at);
         let end = if allow_coda {
             plain_syllable.coda
         } else {
             start_at + 1
         };
-        if !allow_coda {
-            plain_syllable.onset = plain_syllable.onset.max(start_at);
-        }
         let others = self.find_multisyllable(word, start_at..end);
         let plain_syllable_iter = if allow_coda || plain_syllable.onset == start_at {
             Some((plain_syllable, None))
@@ -853,6 +884,10 @@ impl<'w> Syllable<'w> {
 
     fn vowel_range(&self) -> Range<usize> {
         self.indices.vowel..self.indices.coda
+    }
+
+    fn vowel(&self) -> &'w Phoneme {
+        &self.word[self.indices.vowel]
     }
 
     fn coda_range(&self) -> Range<usize> {
@@ -944,7 +979,7 @@ mod tests {
     }
 
     #[test_case("S N UW1 T", &["S N UW1 T"] ; "snoot")]
-    #[test_case("S EY1 IH0 NG", &["S EY1/EY1 IH0 NG"] ; "saying")]
+    #[test_case("S EY1 IH0 NG", &["S EY1/IH0 NG"] ; "saying")]
     #[test_case("IH0 K S P EH2 N D", &["IH0 K S/P EH2 N D", "IH0 K/S P EH2 N D"]; "expend")]
     #[test_case("IH0 K S CH EY2 N JH", &["IH0 K S/CH EY2 N JH", "IH0 K S/CH EY2 N JH"] ; "exchange")]
     #[test_case("D IH1 S T AH0 N T", &["D IH1 S/T AH0 N T", "D IH1/S T AH0 N T"] ; "distant")]
