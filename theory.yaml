@@ -223,10 +223,13 @@ theory:
       - stress: ["None"]
         position: ["Final"]
         chords: ["-SZ"]
+    "AH B AH L":
+      - stress: ["None"]
+        chords: ["-BL"]
     "AH":
       - stress: ["None"]
-        chords: ["", "U"]
         position: ["Medial"]
+        chords: ["", "U"]
     "ER":
       - stress: ["None"]
         position: ["Final"]
