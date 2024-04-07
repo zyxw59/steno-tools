@@ -147,15 +147,8 @@ impl PhoneticTheory {
         let linker = self.theory.get_linker(syllable);
         let st = prev.map(|op| op.stroke);
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
-        let prev_linker = if syllable.onset_range().is_empty() {
-            prev.map(|piece| piece.linker).unwrap_or_default()
-        } else {
-            Chord::empty()
-        };
         let (chords, skip) = self.theory.get_suffix(syllable, prev_skip);
         for &ch in chords {
-            let ch = ch | prev_linker; // TODO: what if it conflicts?
-                                       // TODO: what about empty suffixes?
             if let Some(st) = st {
                 if (st & ch).is_empty() && st.before_ignore_star(ch) {
                     next_outlines.push(OutlinePiece {

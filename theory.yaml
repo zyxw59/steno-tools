@@ -190,6 +190,7 @@ theory:
     "AH":
       - stress: ["None"]
         chords: ["", "U"]
+        position: ["Medial"]
     "ER":
       - stress: ["None"]
         position: ["Final"]
