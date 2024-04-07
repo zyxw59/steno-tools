@@ -98,6 +98,18 @@ theory:
     "Z": ["STK", "S*"]
     "ZH": ["SKH"]
     "HH W": ["WH"]
+    "N Y":
+      - next: "AH"
+        stress: ["None"]
+        chords: ["TPH"]
+      - next: "ER"
+        stress: ["None"]
+        chords: ["TPH"]
+      - next: "UH"
+        chords: ["TPH"]
+      - next: "UW"
+        chords: ["TPH"]
+      - chords: ["TPWH"]
   codas:
     "B": ["-B"]
     "D": ["-D"]
