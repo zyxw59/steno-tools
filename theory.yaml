@@ -268,7 +268,7 @@ phonology:
     - first: ["P", "B", "T", "D", "K", "G"]
       second: ["R", "W"]
     # Allow voicless fricative, 'z', or 'v' plus approximant other than 'j'.
-    - first: ["F", "S", "Z", "SH"]
+    - first: ["F", "S", "Z"]
       second: ["L"]
     - first: ["F", "TH", "SH", "V"]
       second: ["R"]
