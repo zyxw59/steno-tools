@@ -147,6 +147,11 @@ impl PhoneticTheory {
         let linker = self.theory.get_linker(syllable);
         let st = prev.map(|op| op.stroke);
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        let prev_linker = if syllable.onset_range().is_empty() {
+            prev.map(|piece| piece.linker).unwrap_or_default()
+        } else {
+            Chord::empty()
+        };
         let (chords, skip) = self.theory.get_suffix(syllable, prev_skip);
         for &ch in chords {
             if let Some(st) = st {
@@ -161,7 +166,7 @@ impl PhoneticTheory {
                 } else {
                     // if the suffix would conflict, push it as a standalone
                     next_outlines.push(OutlinePiece {
-                        stroke: ch,
+                        stroke: ch | prev_linker, // TODO what if the linker would conflict
                         linker,
                         replace_previous: false,
                         kind: OutlinePieceKind::Suffix,
