@@ -24,7 +24,7 @@ pub struct PhoneticTheory {
 
 impl PhoneticTheory {
     pub fn get_outline(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Outline> {
-        self.get_outline_tree(pronunciation)
+        self.get_outline_tree(pronunciation)?
             .as_ref()
             .paths()
             .with_collect_copied()
@@ -37,11 +37,17 @@ impl PhoneticTheory {
             })
     }
 
-    fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> Tree<OutlinePiece> {
+    fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Tree<OutlinePiece>> {
         let syllables = self.phonology.syllable_tree(pronunciation);
-        syllables.as_ref().multi_map(|syllable, prev_stroke| {
+        if syllables.is_empty() {
+            return Err(anyhow::anyhow!(
+                "no syllabification found for word {}",
+                PronunciationSlice(pronunciation)
+            ));
+        }
+        Ok(syllables.as_ref().multi_map(|syllable, prev_stroke| {
             self.outlines_for_syllable(prev_stroke.copied(), *syllable)
-        })
+        }))
     }
 
     fn outlines_for_syllable(
@@ -63,8 +69,8 @@ impl PhoneticTheory {
         pron_1: &[Phoneme],
         pron_2: &[Phoneme],
     ) -> Option<(Outline, Outline)> {
-        let outlines_1 = self.get_outline_tree(pron_1);
-        let outlines_2 = self.get_outline_tree(pron_2);
+        let outlines_1 = self.get_outline_tree(pron_1).ok()?;
+        let outlines_2 = self.get_outline_tree(pron_2).ok()?;
         disambiguate_iters(
             outline,
             outlines_1.as_ref().paths().with_collect_copied::<Outline>(),
@@ -578,7 +584,10 @@ impl Theory {
 
     fn get_linker(&self, syllable: Syllable) -> Chord {
         if syllable.coda_range().is_empty() {
-            self.linkers.get(syllable.vowel()).copied().unwrap_or_default()
+            self.linkers
+                .get(syllable.vowel())
+                .copied()
+                .unwrap_or_default()
         } else {
             Chord::empty()
         }
