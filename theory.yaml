@@ -25,6 +25,8 @@ theory:
       - prev: "Y"
         stress: ["None"]
         chords: ["AOUR"]
+      - next: "CH"
+        chords: ["U"]
       - chords: ["UR"]
     "UH":
       - prev: "Y"
@@ -110,7 +112,11 @@ theory:
     "R": ["-R"]
     "S": ["-S", "-F", "*F"]
     "T": ["-T"]
-    "CH": ["-FP"]
+    "CH":
+      - prev: "ER"
+        chords: ["-FRPB"]
+      - chords: ["-FP"]
+    "T CH": ["-FP"]
     "V": ["-F", "-FB"]
     "Z": ["-Z", "-F", "*F"]
     "DH": ["*T"]
