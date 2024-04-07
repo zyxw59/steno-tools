@@ -5,6 +5,7 @@ use std::{
     rc::Rc,
 };
 
+use enumset::{EnumSet, EnumSetType};
 use itertools::Itertools;
 use regex::{RegexSet, RegexSetBuilder};
 use serde::Deserialize;
@@ -346,7 +347,7 @@ struct OutputRule {
     prev_broad: Option<Pronunciation>,
     next: Option<Pronunciation>,
     next_broad: Option<Pronunciation>,
-    stress: Option<Stress>,
+    stress: Option<EnumSet<Stress>>,
     chords: Rc<[Chord]>,
 }
 
@@ -364,7 +365,7 @@ impl OutputRule {
     }
 
     fn matches_stress(&self, syllable: Syllable<'_>, _at: Range<usize>) -> Option<bool> {
-        self.stress.map(|st| st == syllable.indices.stress)
+        self.stress.map(|st| st.contains(syllable.indices.stress))
     }
 
     fn matches_prev(&self, syllable: Syllable<'_>, at: Range<usize>) -> Option<bool> {
@@ -397,7 +398,8 @@ struct SyllableRule {
     prev: Option<Pronunciation>,
     next: Option<Pronunciation>,
     take_next: Option<Pronunciation>,
-    stress: Option<Stress>,
+    stress: Option<EnumSet<Stress>>,
+    position: Option<EnumSet<SyllablePosition>>,
     chords: Rc<[Chord]>,
 }
 
@@ -405,6 +407,7 @@ impl SyllableRule {
     fn matches(&self, syllable: Syllable<'_>) -> bool {
         [
             Self::matches_stress,
+            Self::matches_position,
             Self::matches_prev,
             Self::matches_next,
             Self::matches_take_next,
@@ -414,7 +417,11 @@ impl SyllableRule {
     }
 
     fn matches_stress(&self, syllable: Syllable<'_>) -> Option<bool> {
-        self.stress.map(|st| st == syllable.indices.stress)
+        self.stress.map(|st| st.contains(syllable.indices.stress))
+    }
+
+    fn matches_position(&self, syllable: Syllable<'_>) -> Option<bool> {
+        self.position.map(|pos| pos.contains(syllable.position()))
     }
 
     fn matches_prev(&self, syllable: Syllable<'_>) -> Option<bool> {
@@ -606,7 +613,8 @@ struct MultiSyllable {
     onset: Pronunciation,
     vowel: Phoneme,
     coda: Pronunciation,
-    stress: Stress,
+    stress: Option<EnumSet<Stress>>,
+    position: Option<EnumSet<SyllablePosition>>,
 }
 
 impl MultiSyllable {
@@ -627,23 +635,49 @@ impl MultiSyllable {
             let coda = vowel + 1;
             let end = coda + self.coda.len();
             let vowel_ph = &word[vowel];
+            let indices = SyllableIndices {
+                onset,
+                vowel,
+                coda,
+                stress: vowel_ph.stress(),
+            };
+            let position = SyllablePosition::new(onset == 0, end == word.len());
             if word[onset..vowel] == *self.onset
                 && vowel_ph == &self.vowel
-                && vowel_ph.stress() == self.stress
+                && self
+                    .stress
+                    .map(|st| st.contains(indices.stress))
+                    .unwrap_or(true)
+                && self
+                    .position
+                    .map(|pos| pos.contains(position))
+                    .unwrap_or(true)
                 && word[coda..end] == *self.coda
             {
-                return Some((
-                    SyllableIndices {
-                        onset,
-                        vowel,
-                        coda,
-                        stress: self.stress,
-                    },
-                    end,
-                ));
+                return Some((indices, end));
             }
         }
         None
+    }
+}
+
+#[derive(Debug, EnumSetType, Deserialize, serde::Serialize)]
+#[enumset(serialize_repr = "list")]
+enum SyllablePosition {
+    Only,
+    Initial,
+    Medial,
+    Final,
+}
+
+impl SyllablePosition {
+    fn new(is_start: bool, is_end: bool) -> Self {
+        match (is_start, is_end) {
+            (true, true) => SyllablePosition::Only,
+            (true, false) => SyllablePosition::Initial,
+            (false, true) => SyllablePosition::Final,
+            (false, false) => SyllablePosition::Medial,
+        }
     }
 }
 
@@ -753,12 +787,15 @@ impl Phonology {
         start_at: usize,
         allow_coda: bool,
     ) -> impl Iterator<Item = (SyllableIndices, Option<usize>)> + Captures<(&'p (), &'w ())> {
-        let plain_syllable = self.syllabize_one(word, start_at);
+        let mut plain_syllable = self.syllabize_one(word, start_at);
         let end = if allow_coda {
             plain_syllable.coda
         } else {
             start_at + 1
         };
+        if !allow_coda {
+            plain_syllable.onset = plain_syllable.onset.max(start_at);
+        }
         let others = self.find_multisyllable(word, start_at..end);
         let plain_syllable_iter = if allow_coda || plain_syllable.onset == start_at {
             Some((plain_syllable, None))
@@ -843,6 +880,10 @@ impl<'w> Syllable<'w> {
     fn after_index(&self, index: usize) -> &'w [Phoneme] {
         &self.word[index..self.end]
     }
+
+    fn position(&self) -> SyllablePosition {
+        SyllablePosition::new(self.indices.onset == 0, self.end == self.word.len())
+    }
 }
 
 impl fmt::Display for Syllable<'_> {
@@ -904,6 +945,9 @@ mod tests {
 
     #[test_case("S N UW1 T", &["S N UW1 T"] ; "snoot")]
     #[test_case("S EY1 IH0 NG", &["S EY1/EY1 IH0 NG"] ; "saying")]
+    #[test_case("IH0 K S P EH2 N D", &["IH0 K S/P EH2 N D", "IH0 K/S P EH2 N D"]; "expend")]
+    #[test_case("IH0 K S CH EY2 N JH", &["IH0 K S/CH EY2 N JH", "IH0 K S/CH EY2 N JH"] ; "exchange")]
+    #[test_case("D IH1 S T AH0 N T", &["D IH1 S/T AH0 N T", "D IH1/S T AH0 N T"] ; "distant")]
     #[test_case("L AH1 V AH0 B AH0 L", &[
         "L AH1 V/AH0 B AH0 L",
         "L AH1 V/AH0/B AH0 L",
@@ -932,15 +976,30 @@ mod tests {
     #[test_case("M AE1 R IY0", "PHE/RAOE" ; "marry")]
     #[test_case("IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
     #[test_case("IH0 K S CH EY2 N JH", "KPHAEUFPBG" ; "exchange")]
+    #[test_case("D IH1 S T AH0 N T", "STKUPBT" ; "distant")]
     #[test_case("AE1 K SH AH0 N", "ABGS" ; "action")]
-    #[test_case("G AH1 M P SH AH0 N", "TKPW*UPLGS" ; "gumption")]
+    #[test_case("G AH1 M P SH AH0 N", "TKPWUFRPGS" ; "gumption")]
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
     #[test_case("D R AO1 IH0 NG", "TKRO/WEUPBG" ; "drawing")]
     fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
-        let actual_outline = theory.get_outline(&Pronunciation::from(pronunciation))?;
+        let outlines = theory.get_outline_tree(&Pronunciation::from(pronunciation));
+        let outline_tree = outlines.as_ref().map(|piece| {
+            if piece.replace_previous {
+                format!("(-){}", piece.stroke)
+            } else {
+                format!("{}", piece.stroke)
+            }
+        });
+        eprintln!("outlines: {outline_tree:?}");
+        let actual_outline = outlines
+            .as_ref()
+            .paths()
+            .with_collect_copied::<Outline>()
+            .next()
+            .expect("no outlines");
         assert_eq!(actual_outline, expected_outline);
         Ok(())
     }

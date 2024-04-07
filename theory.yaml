@@ -2,7 +2,7 @@ theory:
   vowels:
     "AH":
       - prev: "Y"
-        stress: None
+        stress: ["None"]
         chords: ["AOU"]
       - chords: ["U"]
     "AA":
@@ -23,7 +23,7 @@ theory:
     "EH": ["E"]
     "ER":
       - prev: "Y"
-        stress: None
+        stress: ["None"]
         chords: ["AOUR"]
       - chords: ["UR"]
     "UH":
@@ -72,10 +72,10 @@ theory:
     "W": ["W"]
     "Y":
       - next: "AH"
-        stress: None
+        stress: ["None"]
         chords: [""]
       - next: "ER"
-        stress: None
+        stress: ["None"]
         chords: [""]
       - next: "UH"
         chords: [""]
@@ -133,39 +133,58 @@ theory:
     "L P": ["-P", "-PL"]
 
   prefixes:
-    "IH K":
-      - take_next: "S P"
-        stress: None
-        chords: ["KP"]
-      - take_next: "S K"
-        stress: None
-        chords: ["KP"]
-      - take_next: "S T"
-        stress: None
-        chords: ["KP"]
-      - take_next: "S"
-        stress: None
-        chords: ["KP"]
     "IH K S":
+      - take_next: "P"
+        stress: ["None"]
+        chords: ["KP"]
+        position: ["Initial"]
+      - take_next: "K"
+        stress: ["None"]
+        chords: ["KP"]
+        position: ["Initial"]
+      - take_next: "T"
+        stress: ["None"]
+        chords: ["KP"]
+        position: ["Initial"]
       - take_next: "CH"
-        stress: None
+        stress: ["None"]
         chords: ["KPH"]
+        position: ["Initial"]
+      - stress: ["None"]
+        chords: ["KP"]
+        position: ["Initial"]
     "K AA N":
       - chords: ["K"]
+        position: ["Initial"]
     "K AO N":
       - chords: ["K"]
+        position: ["Initial"]
+    "D IH S":
+      - take_next: "T"
+        chords: ["STK"]
+      - take_next: "K"
+        chords: ["STK"]
+      - chords: ["STK"]
   suffixes:
     "K SH AH N":
-      - stress: None
+      - stress: ["None"]
         chords: ["-BGS", "*BGS"]
     "SH AH N":
-      - stress: None
+      - stress: ["None"]
         chords: ["-GS", "*GS"]
     "SH AH S":
-      - stress: None
+      - stress: ["None"]
         chords: ["-RBS", "*RBS"]
+    "S AH Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-SZ"]
+    "S IH Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-SZ"]
     "AH":
-      - stress: None
+      - stress: ["None"]
         chords: ["", "U"]
 
   spelling_conflicts:
@@ -232,18 +251,28 @@ phonology:
     "AW", "OW", "UW", "ER"]
   multi_syllables:
     - onset: ""
+      vowel: "IH"
+      coda: "K S"
+      stress: ["None"]
+      position: ["Initial"]
+    - onset: "D"
+      vowel: "IH"
+      coda: "S"
+    - onset: ""
       vowel: "AH"
       coda: "B AH L"
-      stress: None
+      stress: ["None"]
     - onset: ""
       vowel: "AH"
       coda: ""
-      stress: None
+      stress: ["None"]
+      position: ["Medial"]
     - onset: "K SH"
       vowel: "AH"
       coda: "N"
-      stress: None
+      stress: ["None"]
     - onset: "SH"
       vowel: "AH"
       coda: "N"
-      stress: None
+      stress: ["None"]
+      position: ["Medial", "Final"]
