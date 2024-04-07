@@ -144,6 +144,8 @@ theory:
     "L V": ["-FL"]
     "R V": ["-FRB"]
     "S T": ["-FT", "*S"]
+    "D S T": ["-DZ"]
+    "D TH": ["*TD"]
     "NG": ["-PBG"]
     "N K": ["-PBG"]
     "NG K": ["-PBG"]
