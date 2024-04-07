@@ -319,3 +319,13 @@ phonology:
       coda: "N"
       stress: ["None"]
       position: ["Medial", "Final"]
+    - onset: ""
+      vowel: "ER"
+      coda: ""
+      stress: ["None"]
+      position: ["Final"]
+    - onset: ""
+      vowel: "ER"
+      coda: "Z"
+      stress: ["None"]
+      position: ["Final"]
