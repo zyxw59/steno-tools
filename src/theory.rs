@@ -578,7 +578,10 @@ impl Theory {
 
     fn get_linker(&self, syllable: Syllable) -> Chord {
         if syllable.coda_range().is_empty() {
-            self.linkers.get(syllable.vowel()).copied().unwrap_or_default()
+            self.linkers
+                .get(syllable.vowel())
+                .copied()
+                .unwrap_or_default()
         } else {
             Chord::empty()
         }
@@ -628,18 +631,57 @@ impl<'t, 'w> Iterator for MatchChordIter<'t, 'w> {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct RawPhonology {
-    onset_singles: BTreeSet<Phoneme>,
-    onset_clusters: Vec<OnsetCluster>,
-    vowels: BTreeSet<Phoneme>,
-    #[serde(default)]
-    multi_syllables: Vec<MultiSyllable>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct OnsetCluster {
+struct RawCluster {
     first: BTreeSet<Phoneme>,
     second: BTreeSet<Phoneme>,
+}
+
+#[derive(Debug, Default, Clone, Deserialize)]
+#[serde(from = "Vec<RawCluster>")]
+struct ClusterMap {
+    map: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
+}
+
+impl ClusterMap {
+    /// Finds the maximal cluster within the range of indices in the word, anchored at the end.
+    /// Returns the start index of the cluster.
+    pub fn find(
+        &self,
+        word: &[Phoneme],
+        range: Range<usize>,
+        initial: Option<&BTreeSet<Phoneme>>,
+    ) -> usize {
+        let empty_set = BTreeSet::new();
+        let mut allowed_phonemes = initial
+            .or_else(|| self.map.get(&word[range.end]))
+            .unwrap_or(&empty_set);
+        word[range.clone()]
+            .iter()
+            .rposition(|ph| {
+                if !allowed_phonemes.contains(ph) {
+                    return true;
+                }
+                allowed_phonemes = self.map.get(ph).unwrap_or(&empty_set);
+                false
+            })
+            .map(|idx| idx + 1 + range.start)
+            .unwrap_or(range.start)
+    }
+}
+
+impl From<Vec<RawCluster>> for ClusterMap {
+    fn from(raw_clusters: Vec<RawCluster>) -> Self {
+        // map (second_consonant -> [first_consonants])
+        let mut map = BTreeMap::<_, BTreeSet<_>>::new();
+        for cluster in raw_clusters {
+            for ph in cluster.second {
+                map.entry(ph)
+                    .or_default()
+                    .extend(cluster.first.iter().cloned());
+            }
+        }
+        Self { map }
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
@@ -715,33 +757,14 @@ impl SyllablePosition {
     }
 }
 
-impl From<RawPhonology> for Phonology {
-    fn from(raw: RawPhonology) -> Self {
-        // map (second_consonant -> [first_consonants])
-        let mut onset_clusters = BTreeMap::<_, BTreeSet<_>>::new();
-        for cluster in raw.onset_clusters {
-            for ph in cluster.second {
-                onset_clusters
-                    .entry(ph)
-                    .or_default()
-                    .extend(cluster.first.iter().cloned());
-            }
-        }
-        Phonology {
-            onset_singles: raw.onset_singles,
-            onset_clusters,
-            vowels: raw.vowels,
-            multi_syllables: raw.multi_syllables,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Deserialize)]
-#[serde(try_from = "RawPhonology")]
 pub struct Phonology {
     onset_singles: BTreeSet<Phoneme>,
-    onset_clusters: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
+    onset_clusters: ClusterMap,
     vowels: BTreeSet<Phoneme>,
+    #[serde(default)]
+    vowel_clusters: ClusterMap,
+    #[serde(default)]
     multi_syllables: Vec<MultiSyllable>,
 }
 
@@ -763,19 +786,9 @@ impl Phonology {
         let stress = word[vowel].stress();
         let coda = vowel + 1;
         // work backwards to find the maximally valid onset
-        let mut allowed_phonemes = &self.onset_singles;
-        let empty_set = BTreeSet::new();
-        let onset = word[start_at..vowel]
-            .iter()
-            .rposition(|ph| {
-                if !allowed_phonemes.contains(ph) {
-                    return true;
-                }
-                allowed_phonemes = self.onset_clusters.get(ph).unwrap_or(&empty_set);
-                false
-            })
-            .map(|idx| idx + 1 + start_at)
-            .unwrap_or(start_at);
+        let onset = self
+            .onset_clusters
+            .find(word, start_at..vowel, Some(&self.onset_singles));
         SyllableIndices {
             stress,
             onset,
