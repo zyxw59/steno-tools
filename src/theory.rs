@@ -1029,7 +1029,7 @@ mod tests {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
-        let outlines = theory.get_outline_tree(&Pronunciation::from(pronunciation));
+        let outlines = theory.get_outline_tree(&Pronunciation::from(pronunciation))?;
         let outline_tree = outlines.as_ref().map(|piece| {
             if piece.replace_previous {
                 format!("(-){}", piece.stroke)
