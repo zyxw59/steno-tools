@@ -317,7 +317,7 @@ pub struct Theory {
     vowels: PronunciationMap<OutputRules>,
     codas: PronunciationMap<OutputRules>,
     #[serde(default)]
-    linkers: BTreeMap<Phoneme, Chord>,
+    linkers: BTreeMap<Pronunciation, Chord>,
     #[serde(default)]
     prefixes: PronunciationMap<Rc<[SyllableRule]>>,
     #[serde(default)]
@@ -785,6 +785,7 @@ impl Phonology {
         vowel += start_at;
         let stress = word[vowel].stress();
         let coda = vowel + 1;
+        vowel = self.vowel_clusters.find(word, start_at..vowel, None);
         // work backwards to find the maximally valid onset
         let onset = self
             .onset_clusters
@@ -899,8 +900,8 @@ impl<'w> Syllable<'w> {
         self.indices.vowel..self.indices.coda
     }
 
-    fn vowel(&self) -> &'w Phoneme {
-        &self.word[self.indices.vowel]
+    fn vowel(&self) -> &'w [Phoneme] {
+        &self.word[self.vowel_range()]
     }
 
     fn coda_range(&self) -> Range<usize> {
@@ -993,6 +994,8 @@ mod tests {
 
     #[test_case("S N UW1 T", &["S N UW1 T"] ; "snoot")]
     #[test_case("S EY1 IH0 NG", &["S EY1/IH0 NG"] ; "saying")]
+    #[test_case("B AE1 K Y AA2 R D", &["B AE1 K/Y AA2 R D"] ; "backyard")]
+    #[test_case("K Y UW1 B", &["K Y UW1 B"] ; "cube")]
     #[test_case("IH0 K S P EH2 N D", &["IH0 K S/P EH2 N D", "IH0 K/S P EH2 N D"]; "expend")]
     #[test_case("IH0 K S CH EY2 N JH", &["IH0 K S/CH EY2 N JH", "IH0 K S/CH EY2 N JH"] ; "exchange")]
     #[test_case("D IH1 S T AH0 N T", &["D IH1 S/T AH0 N T", "D IH1/S T AH0 N T"] ; "distant")]

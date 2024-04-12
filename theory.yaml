@@ -1,10 +1,6 @@
 theory:
   vowels:
-    "AH":
-      - prev: "Y"
-        stress: ["None"]
-        chords: ["AOU"]
-      - chords: ["U"]
+    "AH": ["U"]
     "AA":
       - next: "L"
         chords: ["AU"]
@@ -21,14 +17,8 @@ theory:
       - chords: ["A"]
     "IH": ["EU"]
     "EH": ["E"]
-    "ER":
-      - prev: "Y"
-        stress: ["None"]
-        chords: ["AOUR"]
-      - chords: ["UR"]
+    "ER": ["UR"]
     "UH":
-      - prev: "Y"
-        chords: ["AOU"]
       - next_broad: "L"
         chords: ["U"]
       - chords: ["AO"]
@@ -44,10 +34,17 @@ theory:
       - next: "L"
         chords: ["O"]
       - chords: ["OE"]
-    "UW":
-      - prev: "Y"
+    "UW": ["AO"]
+    "Y UW": ["AOU"]
+    "Y UH": ["AOU"]
+    "Y AH":
+      - stress: ["None"]
         chords: ["AOU"]
-      - chords: ["AO"]
+      - chords: ["KWRU"]
+    "Y ER":
+      - stress: ["None"]
+        chords: ["AOUR"]
+      - chords: ["KWRUR"]
   linkers:
     "AY": "KWR"
     "EY": "KWR"
@@ -81,18 +78,7 @@ theory:
     "TH": ["TH"]
     "V": ["SPW"]
     "W": ["W"]
-    "Y":
-      - next: "AH"
-        stress: ["None"]
-        chords: [""]
-      - next: "ER"
-        stress: ["None"]
-        chords: [""]
-      - next: "UH"
-        chords: [""]
-      - next: "UW"
-        chords: [""]
-      - chords: ["KWR"]
+    "Y": ["KWR"]
     "Z": ["STK", "S*"]
     "ZH": ["SKH"]
     "HH W": ["WH"]
@@ -255,12 +241,14 @@ phonology:
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["S"]
       second: ["P", "T", "K", "M", "N", "F", "TH"]
-    # Allow any consonant other than 'r' or 'w' followed by 'j'
-    - first: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
-      "S", "T", "CH", "V", "Z", "DH", "SH", "ZH", "TH"]
+    # Allow 'nj' clusters :3
+    - first: ["N"]
       second: ["Y"]
   vowels: ["AH", "AA", "AO", "AE", "IH", "EH", "UH", "IY", "EY", "AY", "OY",
     "AW", "OW", "UW", "ER"]
+  vowel_clusters:
+    - first: ["Y"]
+      second: ["UW", "UH", "AH"]
   multi_syllables:
     - onset: ""
       vowel: "IH"
