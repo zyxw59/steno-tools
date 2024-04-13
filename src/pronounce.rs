@@ -51,6 +51,11 @@ impl Dictionary {
             })
         })
     }
+
+    /// Filters the dictionary to only contain words matching the filter
+    pub fn retain_words(&mut self, mut predicate: impl FnMut(&Word) -> bool) {
+        self.entries.retain(|word, _prons| predicate(word))
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]

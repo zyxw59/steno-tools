@@ -237,21 +237,51 @@ impl<'a, T> TreeRef<'a, T> {
         }
     }
 
-    pub fn multi_map<I, U>(self, mut generator: impl FnMut(&'a T, Option<&U>) -> I) -> Tree<U>
+    pub fn multi_map<I, U>(self, generator: impl for<'b> FnMut(&'b T, Option<&U>) -> I) -> Tree<U>
     where
         I: IntoIterator<Item = U>,
     {
+        let empty = Tree::new();
+        self.multi_map_with_graft(empty.as_ref(), generator)
+    }
+
+    pub fn multi_map_with_graft<I, U>(
+        self,
+        graft: TreeRef<'a, T>,
+        mut generator: impl FnMut(&'a T, Option<&U>) -> I,
+    ) -> Tree<U>
+    where
+        I: IntoIterator<Item = U>,
+    {
+        use itertools::Either;
+
         let mut intermediate = Tree::new();
         for (idx, node) in self.node_iter() {
             for value in generator(&node.value, None) {
-                intermediate.insert((idx, value), None);
+                intermediate.insert((Either::Left(idx), value), None);
             }
         }
 
         let mut next_idx = intermediate.roots.map(|(first, _)| first);
         while let Some(new_parent_idx) = next_idx {
             let &(parent_idx, _) = intermediate.get(new_parent_idx).unwrap();
-            for (idx, node) in self.child_nodes(parent_idx) {
+            let mut child_nodes = match parent_idx {
+                Either::Left(parent_idx) => self.child_nodes(parent_idx),
+                Either::Right(parent_idx) => graft.child_nodes(parent_idx),
+            };
+            let mut is_graft = parent_idx.is_right();
+            // leaf in the original tree: add a graft
+            if child_nodes.is_empty() && !is_graft {
+                child_nodes = graft.node_iter();
+                is_graft = true;
+            }
+            let is_leaf = child_nodes.is_empty();
+            for (idx, node) in child_nodes {
+                let idx = if is_graft {
+                    Either::Right(idx)
+                } else {
+                    Either::Left(idx)
+                };
                 let (_, parent_value) = intermediate.get(new_parent_idx).unwrap();
                 for value in generator(&node.value, Some(parent_value)) {
                     intermediate.insert((idx, value), Some(new_parent_idx));
@@ -259,9 +289,7 @@ impl<'a, T> TreeRef<'a, T> {
             }
             next_idx = intermediate.as_ref().next_dfs(new_parent_idx);
             // only allow leaf nodes where the original tree had leaves
-            if intermediate.slab[new_parent_idx.0].children.is_none()
-                && self.slab[parent_idx.0].children.is_some()
-            {
+            if intermediate.slab[new_parent_idx.0].children.is_none() && !is_leaf {
                 intermediate.remove_branch(new_parent_idx);
             }
         }
@@ -429,6 +457,12 @@ impl<'a, T> Iterator for SubTreeIter<'a, T> {
 struct SiblingNodeIter<'a, T> {
     slab: &'a Slab<Node<T>>,
     roots: Option<(TreeIdx, TreeIdx)>,
+}
+
+impl<T> SiblingNodeIter<'_, T> {
+    pub fn is_empty(&self) -> bool {
+        self.roots.is_none()
+    }
 }
 
 impl<'a, T> Iterator for SiblingNodeIter<'a, T> {

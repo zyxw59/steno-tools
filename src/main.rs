@@ -14,8 +14,8 @@ mod dictionary;
 mod generated;
 mod pronounce;
 mod theory;
-mod wrapper_impls;
 mod tree;
+mod wrapper_impls;
 
 use dictionary::{Dictionary, Word};
 use generated::{GeneratedDictionary, NoOutline};
@@ -138,9 +138,13 @@ impl Categorize {
 
 #[derive(Debug, clap::Args)]
 struct GenerateOutlines {
+    #[clap(short, long)]
     wordlist: PathBuf,
+    #[clap(short, long = "pronunciations")]
     pronunciation_file: PathBuf,
+    #[clap(short, long = "theory")]
     theory_file: PathBuf,
+    #[clap(short, long = "output")]
     out_file: Option<PathBuf>,
 }
 
@@ -179,7 +183,11 @@ impl GenerateOutlines {
             if entry_1.pronunciation == entry_2.pronunciation {
                 return None;
             }
-            theory.disambiguate_phonetic(outline.clone(), &entry_1.pronunciation, &entry_2.pronunciation)
+            theory.disambiguate_phonetic(
+                outline.clone(),
+                &entry_1.pronunciation,
+                &entry_2.pronunciation,
+            )
         });
         generated_dict.resolve_pairs(|outline, entry_1, entry_2| {
             if entry_1.word == entry_2.word {
@@ -198,14 +206,32 @@ impl GenerateOutlines {
 
 #[derive(Debug, clap::Args)]
 struct CompoundWords {
+    #[clap(short, long)]
+    wordlist: Option<PathBuf>,
+    #[clap(short, long = "pronunciations")]
     pronunciation_file: PathBuf,
+    #[clap(short, long = "output")]
     out_file: Option<PathBuf>,
 }
 
 impl CompoundWords {
     fn execute(&self) -> anyhow::Result<()> {
-        let pronunciation_dict =
+        let words = if let Some(wordlist) = &self.wordlist {
+            Some(
+                BufReader::new(File::open(wordlist)?)
+                    .lines()
+                    .map_while(Result::ok)
+                    .map(Word::from)
+                    .collect::<BTreeSet<Word>>(),
+            )
+        } else {
+            None
+        };
+        let mut pronunciation_dict =
             pronounce::Dictionary::load(BufReader::new(File::open(&self.pronunciation_file)?))?;
+        if let Some(words) = words {
+            pronunciation_dict.retain_words(|word| words.contains(word));
+        }
         let compounds = compound_words::CompoundWords::from(&pronunciation_dict);
         if let Some(out_path) = &self.out_file {
             serde_yaml::to_writer(BufWriter::new(File::create(out_path)?), &compounds)?;

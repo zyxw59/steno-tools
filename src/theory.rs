@@ -37,11 +37,40 @@ impl PhoneticTheory {
             })
     }
 
+    pub fn get_outline_compound(&self, first: &[Phoneme], second: &[Phoneme]) -> anyhow::Result<Outline> {
+        self.get_outline_tree_compound(first, second)
+            .as_ref()
+            .paths()
+            .with_collect_copied()
+            .next()
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "no outlines found for word {} {}",
+                    PronunciationSlice(first),
+                    PronunciationSlice(second),
+                )
+            })
+    }
+
     fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> Tree<OutlinePiece> {
         let syllables = self.phonology.syllable_tree(pronunciation);
         syllables.as_ref().multi_map(|syllable, prev_stroke| {
             self.outlines_for_syllable(prev_stroke.copied(), *syllable)
         })
+    }
+
+    fn get_outline_tree_compound(
+        &self,
+        first: &[Phoneme],
+        second: &[Phoneme],
+    ) -> Tree<OutlinePiece> {
+        let first_syllables = self.phonology.syllable_tree(first);
+        let second_syllables = self.phonology.syllable_tree(second);
+        first_syllables
+            .as_ref()
+            .multi_map_with_graft(second_syllables.as_ref(), |syllable, prev_stroke| {
+                self.outlines_for_syllable(prev_stroke.copied(), *syllable)
+            })
     }
 
     fn outlines_for_syllable(
