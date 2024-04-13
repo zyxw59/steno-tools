@@ -189,6 +189,10 @@ impl<T> Tree<T> {
             roots: self.roots,
         }
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.roots.is_none()
+    }
 }
 
 impl<T: fmt::Debug> fmt::Debug for Tree<T> {

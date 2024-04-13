@@ -24,7 +24,7 @@ pub struct PhoneticTheory {
 
 impl PhoneticTheory {
     pub fn get_outline(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Outline> {
-        self.get_outline_tree(pronunciation)
+        self.get_outline_tree(pronunciation)?
             .as_ref()
             .paths()
             .with_collect_copied()
@@ -38,7 +38,7 @@ impl PhoneticTheory {
     }
 
     pub fn get_outline_compound(&self, first: &[Phoneme], second: &[Phoneme]) -> anyhow::Result<Outline> {
-        self.get_outline_tree_compound(first, second)
+        self.get_outline_tree_compound(first, second)?
             .as_ref()
             .paths()
             .with_collect_copied()
@@ -52,25 +52,43 @@ impl PhoneticTheory {
             })
     }
 
-    fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> Tree<OutlinePiece> {
+    fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Tree<OutlinePiece>> {
         let syllables = self.phonology.syllable_tree(pronunciation);
-        syllables.as_ref().multi_map(|syllable, prev_stroke| {
+        if syllables.is_empty() {
+            return Err(anyhow::anyhow!(
+                "no syllabification found for word {}",
+                PronunciationSlice(pronunciation)
+            ));
+        }
+        Ok(syllables.as_ref().multi_map(|syllable, prev_stroke| {
             self.outlines_for_syllable(prev_stroke.copied(), *syllable)
-        })
+        }))
     }
 
     fn get_outline_tree_compound(
         &self,
         first: &[Phoneme],
         second: &[Phoneme],
-    ) -> Tree<OutlinePiece> {
+    ) -> anyhow::Result<Tree<OutlinePiece>> {
         let first_syllables = self.phonology.syllable_tree(first);
+        if first_syllables.is_empty() {
+            return Err(anyhow::anyhow!(
+                "no syllabification found for word {}",
+                PronunciationSlice(first)
+            ));
+        }
         let second_syllables = self.phonology.syllable_tree(second);
-        first_syllables
+        if second_syllables.is_empty() {
+            return Err(anyhow::anyhow!(
+                "no syllabification found for word {}",
+                PronunciationSlice(second)
+            ));
+        }
+        Ok(first_syllables
             .as_ref()
             .multi_map_with_graft(second_syllables.as_ref(), |syllable, prev_stroke| {
                 self.outlines_for_syllable(prev_stroke.copied(), *syllable)
-            })
+            }))
     }
 
     fn outlines_for_syllable(
@@ -92,8 +110,8 @@ impl PhoneticTheory {
         pron_1: &[Phoneme],
         pron_2: &[Phoneme],
     ) -> Option<(Outline, Outline)> {
-        let outlines_1 = self.get_outline_tree(pron_1);
-        let outlines_2 = self.get_outline_tree(pron_2);
+        let outlines_1 = self.get_outline_tree(pron_1).ok()?;
+        let outlines_2 = self.get_outline_tree(pron_2).ok()?;
         disambiguate_iters(
             outline,
             outlines_1.as_ref().paths().with_collect_copied::<Outline>(),
@@ -1065,7 +1083,7 @@ mod tests {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
-        let outlines = theory.get_outline_tree(&Pronunciation::from(pronunciation));
+        let outlines = theory.get_outline_tree(&Pronunciation::from(pronunciation))?;
         let outline_tree = outlines.as_ref().map(|piece| {
             if piece.replace_previous {
                 format!("(-){}", piece.stroke)
