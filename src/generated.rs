@@ -2,7 +2,7 @@ use std::collections::{btree_map::Entry, BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{chord::Outline, dictionary::Word, pronounce::Pronunciation};
+use crate::{chord::Outline, dictionary::Word, pronounce::{DictionaryEntry, Pronunciation}};
 
 #[derive(Default, Debug, Serialize)]
 pub struct GeneratedDictionary {
@@ -105,12 +105,6 @@ impl Serialize for Dictionary {
         }
         map.end()
     }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]
-pub struct DictionaryEntry {
-    pub word: Word,
-    pub pronunciation: Pronunciation,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

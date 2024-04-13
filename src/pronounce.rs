@@ -36,12 +36,27 @@ impl Dictionary {
         Ok(this)
     }
 
-    pub fn get(&self, word: &Word) -> &[Pronunciation] {
+    pub fn get(&self, word: &str) -> &[Pronunciation] {
         self.entries
             .get(&*word.to_ascii_lowercase())
             .map(|ps| &**ps)
             .unwrap_or(&[])
     }
+
+    pub fn entries(&self) -> impl Iterator<Item = DictionaryEntry> + '_ {
+        self.entries.iter().flat_map(|(word, pronunciations)| {
+            pronunciations.iter().map(|pronunciation| DictionaryEntry {
+                word: word.clone(),
+                pronunciation: pronunciation.clone(),
+            })
+        })
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+pub struct DictionaryEntry {
+    pub word: Word,
+    pub pronunciation: Pronunciation,
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]

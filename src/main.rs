@@ -9,6 +9,7 @@ use clap::Parser;
 use serde_json::from_reader;
 
 mod chord;
+mod compound_words;
 mod dictionary;
 mod generated;
 mod pronounce;
@@ -25,6 +26,7 @@ fn main() -> anyhow::Result<()> {
         Command::Compare(args) => args.execute(),
         Command::Categorize(args) => args.execute(),
         Command::GenerateOutlines(args) => args.execute(),
+        Command::CompoundWords(args) => args.execute(),
     }
 }
 
@@ -42,6 +44,8 @@ enum Command {
     Categorize(Categorize),
     /// Generate outlines given a word list, pronunciation dictionary, and theory
     GenerateOutlines(GenerateOutlines),
+    /// Generate a file listing compound words, using the specified pronunciation dictionary
+    CompoundWords(CompoundWords),
 }
 
 #[derive(Debug, clap::Args)]
@@ -187,6 +191,26 @@ impl GenerateOutlines {
             serde_json::to_writer_pretty(BufWriter::new(File::create(out_path)?), &generated_dict)?;
         } else {
             serde_json::to_writer_pretty(io::stdout().lock(), &generated_dict)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, clap::Args)]
+struct CompoundWords {
+    pronunciation_file: PathBuf,
+    out_file: Option<PathBuf>,
+}
+
+impl CompoundWords {
+    fn execute(&self) -> anyhow::Result<()> {
+        let pronunciation_dict =
+            pronounce::Dictionary::load(BufReader::new(File::open(&self.pronunciation_file)?))?;
+        let compounds = compound_words::CompoundWords::from(&pronunciation_dict);
+        if let Some(out_path) = &self.out_file {
+            serde_yaml::to_writer(BufWriter::new(File::create(out_path)?), &compounds)?;
+        } else {
+            serde_yaml::to_writer(io::stdout().lock(), &compounds)?;
         }
         Ok(())
     }
