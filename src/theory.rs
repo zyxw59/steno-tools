@@ -37,7 +37,11 @@ impl PhoneticTheory {
             })
     }
 
-    pub fn get_outline_compound(&self, first: &[Phoneme], second: &[Phoneme]) -> anyhow::Result<Outline> {
+    pub fn get_outline_compound(
+        &self,
+        first: &[Phoneme],
+        second: &[Phoneme],
+    ) -> anyhow::Result<Outline> {
         self.get_outline_tree_compound(first, second)?
             .as_ref()
             .paths()
@@ -1084,6 +1088,35 @@ mod tests {
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
         let outlines = theory.get_outline_tree(&Pronunciation::from(pronunciation))?;
+        let outline_tree = outlines.as_ref().map(|piece| {
+            if piece.replace_previous {
+                format!("(-){}", piece.stroke)
+            } else {
+                format!("{}", piece.stroke)
+            }
+        });
+        eprintln!("outlines: {outline_tree:?}");
+        let actual_outline = outlines
+            .as_ref()
+            .paths()
+            .with_collect_copied::<Outline>()
+            .next()
+            .expect("no outlines");
+        assert_eq!(actual_outline, expected_outline);
+        Ok(())
+    }
+
+    #[test_case("N AO1 R TH", "W EH2 S T", "TPHO*RT/WEFT" ; "northwest")]
+    fn compound_word_to_outline(
+        first: &str,
+        second: &str,
+        expected_outline: &str,
+    ) -> anyhow::Result<()> {
+        let expected_outline = expected_outline.parse::<Outline>()?;
+        let theory: PhoneticTheory =
+            serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
+        let outlines = theory
+            .get_outline_tree_compound(&Pronunciation::from(first), &Pronunciation::from(second))?;
         let outline_tree = outlines.as_ref().map(|piece| {
             if piece.replace_previous {
                 format!("(-){}", piece.stroke)

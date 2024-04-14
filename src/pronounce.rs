@@ -43,12 +43,9 @@ impl Dictionary {
             .unwrap_or(&[])
     }
 
-    pub fn entries(&self) -> impl Iterator<Item = DictionaryEntry> + '_ {
+    pub fn entries(&self) -> impl Iterator<Item = (&Word, &Pronunciation)> {
         self.entries.iter().flat_map(|(word, pronunciations)| {
-            pronunciations.iter().map(|pronunciation| DictionaryEntry {
-                word: word.clone(),
-                pronunciation: pronunciation.clone(),
-            })
+            pronunciations.iter().map(move |pronunciation| (word, pronunciation))
         })
     }
 

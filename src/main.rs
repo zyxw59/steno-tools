@@ -150,7 +150,7 @@ struct GenerateOutlines {
 
 impl GenerateOutlines {
     fn execute(&self) -> anyhow::Result<()> {
-        let pronunciation_dict =
+        let mut pronunciation_dict =
             pronounce::Dictionary::load(BufReader::new(File::open(&self.pronunciation_file)?))?;
         let theory: theory::PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
@@ -158,14 +158,23 @@ impl GenerateOutlines {
         let words = BufReader::new(File::open(&self.wordlist)?)
             .lines()
             .map_while(Result::ok)
-            .map(Word::from);
+            .map(Word::from)
+            .collect::<BTreeSet<_>>();
+        pronunciation_dict.retain_words(|word| words.contains(word));
         for word in words {
             let prons = pronunciation_dict.get(&word);
             if prons.is_empty() {
                 generated_dict.no_pronunciation.push(word.clone())
             }
             for pron in prons {
-                match theory.get_outline(pron) {
+                let outline_result = if let Some([first, second]) =
+                    compound_words::get_unambiguous_split(&word, pron, &pronunciation_dict)
+                {
+                    theory.get_outline_compound(&first.pronunciation, &second.pronunciation)
+                } else {
+                    theory.get_outline(pron)
+                };
+                match outline_result {
                     Ok(outline) => {
                         generated_dict.insert(outline, word.clone(), pron.clone());
                     }
@@ -183,6 +192,8 @@ impl GenerateOutlines {
             if entry_1.pronunciation == entry_2.pronunciation {
                 return None;
             }
+            // TODO: disambiguate compound words? there should be few enough that it's not actually
+            // an issue
             theory.disambiguate_phonetic(
                 outline.clone(),
                 &entry_1.pronunciation,
