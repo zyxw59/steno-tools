@@ -2,7 +2,11 @@ use std::collections::{btree_map::Entry, BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{chord::Outline, dictionary::Word, pronounce::{DictionaryEntry, Pronunciation}};
+use crate::{
+    chord::Outline,
+    dictionary::Word,
+    pronounce::{DictionaryEntry, Pronunciation},
+};
 
 #[derive(Default, Debug, Serialize)]
 pub struct GeneratedDictionary {
@@ -41,11 +45,13 @@ impl GeneratedDictionary {
                 removals.insert(outline.clone());
             }
         }
-        self.conflicts.retain(|outline, _| !removals.contains(outline));
+        self.conflicts
+            .retain(|outline, _| !removals.contains(outline));
     }
 
     pub fn remove_errors_with_valid_alternatives(&mut self) {
-        self.no_outlines.retain(|entry| !self.valid_outlines.words.contains_key(&entry.word))
+        self.no_outlines
+            .retain(|entry| !self.valid_outlines.words.contains_key(&entry.word))
     }
 
     pub fn resolve_pairs(
@@ -73,7 +79,8 @@ impl GeneratedDictionary {
                 insertions.insert(outline_2, entry_2.clone());
             }
         }
-        self.conflicts.retain(|outline, _| !removals.contains(outline));
+        self.conflicts
+            .retain(|outline, _| !removals.contains(outline));
         for (outline, entry) in insertions {
             self.insert(outline, entry.word, entry.pronunciation);
         }
@@ -101,6 +108,10 @@ impl Dictionary {
             }
             Entry::Occupied(_) => {}
             Entry::Vacant(vacant) => {
+                self.words
+                    .entry(new_entry.word.clone())
+                    .or_default()
+                    .insert(outline);
                 vacant.insert(new_entry);
             }
         }
