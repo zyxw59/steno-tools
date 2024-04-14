@@ -115,8 +115,12 @@ impl Dictionary {
     ) -> Option<DictionaryEntry> {
         match self.outlines.entry(outline.clone()) {
             Entry::Occupied(old_entry) if old_entry.get().word != new_entry.word => {
-                if let Some(outlines) = self.words.get_mut(&new_entry.word) {
+                let old_word = &old_entry.get().word;
+                if let Some(outlines) = self.words.get_mut(old_word) {
                     outlines.remove(&outline);
+                    if outlines.is_empty() {
+                        self.words.remove(old_word);
+                    }
                 }
                 return Some(old_entry.remove());
             }
