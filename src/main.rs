@@ -9,12 +9,13 @@ use clap::Parser;
 use serde_json::from_reader;
 
 mod chord;
+mod compound_words;
 mod dictionary;
 mod generated;
 mod pronounce;
 mod theory;
-mod wrapper_impls;
 mod tree;
+mod wrapper_impls;
 
 use dictionary::{Dictionary, Word};
 use generated::{GeneratedDictionary, NoOutline};
@@ -25,6 +26,7 @@ fn main() -> anyhow::Result<()> {
         Command::Compare(args) => args.execute(),
         Command::Categorize(args) => args.execute(),
         Command::GenerateOutlines(args) => args.execute(),
+        Command::CompoundWords(args) => args.execute(),
     }
 }
 
@@ -42,6 +44,8 @@ enum Command {
     Categorize(Categorize),
     /// Generate outlines given a word list, pronunciation dictionary, and theory
     GenerateOutlines(GenerateOutlines),
+    /// Generate a file listing compound words, using the specified pronunciation dictionary
+    CompoundWords(CompoundWords),
 }
 
 #[derive(Debug, clap::Args)]
@@ -134,15 +138,19 @@ impl Categorize {
 
 #[derive(Debug, clap::Args)]
 struct GenerateOutlines {
+    #[clap(short, long)]
     wordlist: PathBuf,
+    #[clap(short, long = "pronunciations")]
     pronunciation_file: PathBuf,
+    #[clap(short, long = "theory")]
     theory_file: PathBuf,
+    #[clap(short, long = "output")]
     out_file: Option<PathBuf>,
 }
 
 impl GenerateOutlines {
     fn execute(&self) -> anyhow::Result<()> {
-        let pronunciation_dict =
+        let mut pronunciation_dict =
             pronounce::Dictionary::load(BufReader::new(File::open(&self.pronunciation_file)?))?;
         let theory: theory::PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
@@ -150,14 +158,23 @@ impl GenerateOutlines {
         let words = BufReader::new(File::open(&self.wordlist)?)
             .lines()
             .map_while(Result::ok)
-            .map(Word::from);
+            .map(Word::from)
+            .collect::<BTreeSet<_>>();
+        pronunciation_dict.retain_words(|word| words.contains(word));
         for word in words {
             let prons = pronunciation_dict.get(&word);
             if prons.is_empty() {
                 generated_dict.no_pronunciation.push(word.clone())
             }
             for pron in prons {
-                match theory.get_outline(pron) {
+                let outline_result = if let Some([first, second]) =
+                    compound_words::get_unambiguous_split(&word, pron, &pronunciation_dict)
+                {
+                    theory.get_outline_compound(&first.pronunciation, &second.pronunciation)
+                } else {
+                    theory.get_outline(pron)
+                };
+                match outline_result {
                     Ok(outline) => {
                         generated_dict.insert(outline, word.clone(), pron.clone());
                     }
@@ -175,7 +192,13 @@ impl GenerateOutlines {
             if entry_1.pronunciation == entry_2.pronunciation {
                 return None;
             }
-            theory.disambiguate_phonetic(outline.clone(), &entry_1.pronunciation, &entry_2.pronunciation)
+            // TODO: disambiguate compound words? there should be few enough that it's not actually
+            // an issue
+            theory.disambiguate_phonetic(
+                outline.clone(),
+                &entry_1.pronunciation,
+                &entry_2.pronunciation,
+            )
         });
         generated_dict.resolve_pairs(|outline, entry_1, entry_2| {
             if entry_1.word == entry_2.word {
@@ -187,6 +210,44 @@ impl GenerateOutlines {
             serde_json::to_writer_pretty(BufWriter::new(File::create(out_path)?), &generated_dict)?;
         } else {
             serde_json::to_writer_pretty(io::stdout().lock(), &generated_dict)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, clap::Args)]
+struct CompoundWords {
+    #[clap(short, long)]
+    wordlist: Option<PathBuf>,
+    #[clap(short, long = "pronunciations")]
+    pronunciation_file: PathBuf,
+    #[clap(short, long = "output")]
+    out_file: Option<PathBuf>,
+}
+
+impl CompoundWords {
+    fn execute(&self) -> anyhow::Result<()> {
+        let words = if let Some(wordlist) = &self.wordlist {
+            Some(
+                BufReader::new(File::open(wordlist)?)
+                    .lines()
+                    .map_while(Result::ok)
+                    .map(Word::from)
+                    .collect::<BTreeSet<Word>>(),
+            )
+        } else {
+            None
+        };
+        let mut pronunciation_dict =
+            pronounce::Dictionary::load(BufReader::new(File::open(&self.pronunciation_file)?))?;
+        if let Some(words) = words {
+            pronunciation_dict.retain_words(|word| words.contains(word));
+        }
+        let compounds = compound_words::CompoundWords::from(&pronunciation_dict);
+        if let Some(out_path) = &self.out_file {
+            serde_yaml::to_writer(BufWriter::new(File::create(out_path)?), &compounds)?;
+        } else {
+            serde_yaml::to_writer(io::stdout().lock(), &compounds)?;
         }
         Ok(())
     }

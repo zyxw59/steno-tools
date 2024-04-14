@@ -36,12 +36,29 @@ impl Dictionary {
         Ok(this)
     }
 
-    pub fn get(&self, word: &Word) -> &[Pronunciation] {
+    pub fn get(&self, word: &str) -> &[Pronunciation] {
         self.entries
             .get(&*word.to_ascii_lowercase())
             .map(|ps| &**ps)
             .unwrap_or(&[])
     }
+
+    pub fn entries(&self) -> impl Iterator<Item = (&Word, &Pronunciation)> {
+        self.entries.iter().flat_map(|(word, pronunciations)| {
+            pronunciations.iter().map(move |pronunciation| (word, pronunciation))
+        })
+    }
+
+    /// Filters the dictionary to only contain words matching the filter
+    pub fn retain_words(&mut self, mut predicate: impl FnMut(&Word) -> bool) {
+        self.entries.retain(|word, _prons| predicate(word))
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize)]
+pub struct DictionaryEntry {
+    pub word: Word,
+    pub pronunciation: Pronunciation,
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Deserialize)]
