@@ -232,6 +232,10 @@ theory:
       - stress: ["None"]
         position: ["Final"]
         chords: ["-RZ", "*RZ"]
+    "IH NG":
+      - stress: ["None", "Secondary"]
+        position: ["Final"]
+        chords: ["-G"]
 
   spelling_conflicts:
     - chord: "AEU"
@@ -334,4 +338,9 @@ phonology:
       vowel: "ER"
       coda: "Z"
       stress: ["None"]
+      position: ["Final"]
+    - onset: ""
+      vowel: "IH"
+      coda: "NG"
+      stress: ["None", "Secondary"]
       position: ["Final"]
