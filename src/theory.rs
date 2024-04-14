@@ -1044,7 +1044,7 @@ mod tests {
     }
 
     #[test_case("S N UW1 T", &["S N UW1 T"] ; "snoot")]
-    #[test_case("S EY1 IH0 NG", &["S EY1/IH0 NG"] ; "saying")]
+    #[test_case("S EY1 IH0 NG", &["S EY1/IH0 NG", "S EY1/IH0 NG"] ; "saying")]
     #[test_case("B AE1 K Y AA2 R D", &["B AE1 K/Y AA2 R D"] ; "backyard")]
     #[test_case("K Y UW1 B", &["K Y UW1 B"] ; "cube")]
     #[test_case("IH0 K S P EH2 N D", &["IH0 K S/P EH2 N D", "IH0 K/S P EH2 N D"]; "expend")]
@@ -1082,7 +1082,7 @@ mod tests {
     #[test_case("AE1 K SH AH0 N", "ABGS" ; "action")]
     #[test_case("G AH1 M P SH AH0 N", "TKPWUFRPGS" ; "gumption")]
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
-    #[test_case("D R AO1 IH0 NG", "TKRO/WEUPBG" ; "drawing")]
+    #[test_case("W IH DH D R AO1 AH0 L", "W*EUT/TKRO/WUL" ; "withdrawal")]
     fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
