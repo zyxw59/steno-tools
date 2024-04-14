@@ -36,6 +36,12 @@ impl Dictionary {
         Ok(this)
     }
 
+    pub fn merge(&mut self, other: Self) {
+        for (word, mut prons) in other.entries {
+            self.entries.entry(word).or_default().append(&mut prons)
+        }
+    }
+
     pub fn get(&self, word: &str) -> &[Pronunciation] {
         self.entries
             .get(&*word.to_ascii_lowercase())

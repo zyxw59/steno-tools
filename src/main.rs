@@ -140,8 +140,8 @@ impl Categorize {
 struct GenerateOutlines {
     #[clap(short, long)]
     wordlist: PathBuf,
-    #[clap(short, long = "pronunciations")]
-    pronunciation_file: PathBuf,
+    #[clap(short, long = "pronunciations", required = true)]
+    pronunciation_file: Vec<PathBuf>,
     #[clap(short, long = "theory")]
     theory_file: PathBuf,
     #[clap(short = 'O', long = "overrides")]
@@ -152,8 +152,15 @@ struct GenerateOutlines {
 
 impl GenerateOutlines {
     fn execute(&self) -> anyhow::Result<()> {
-        let mut pronunciation_dict =
-            pronounce::Dictionary::load(BufReader::new(File::open(&self.pronunciation_file)?))?;
+        let mut pronunciation_dict = self.pronunciation_file.iter().try_fold(
+            pronounce::Dictionary::default(),
+            |mut acc, filename| -> anyhow::Result<_> {
+                acc.merge(pronounce::Dictionary::load(BufReader::new(File::open(
+                    filename,
+                )?))?);
+                Ok(acc)
+            },
+        )?;
         let theory: theory::PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
         let mut generated_dict = GeneratedDictionary::default();
