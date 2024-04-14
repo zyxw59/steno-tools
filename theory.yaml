@@ -17,7 +17,16 @@ theory:
       - chords: ["A"]
     "IH": ["EU"]
     "EH": ["E"]
-    "ER": ["UR"]
+    "ER":
+      - next: "CH"
+        chords: ["U"]
+      - next: "F"
+        chords: ["U"]
+      - next: "S"
+        chords: ["U"]
+      - next: "V"
+        chords: ["U"]
+      - chords: ["UR"]
     "UH":
       - next_broad: "L"
         chords: ["U"]
@@ -44,6 +53,12 @@ theory:
     "Y ER":
       - stress: ["None"]
         chords: ["AOUR"]
+      - next: "CH"
+        chords: ["KWRU"]
+      - next: "F"
+        chords: ["KWRU"]
+      - next: "V"
+        chords: ["KWRU"]
       - chords: ["KWRUR"]
   linkers:
     "AY": "KWR"
@@ -76,33 +91,64 @@ theory:
     "SH": ["SH"]
     "T": ["T"]
     "TH": ["TH"]
-    "V": ["SPW"]
+    "V": ["SPW", "W"]
     "W": ["W"]
     "Y": ["KWR"]
     "Z": ["STK", "S*"]
     "ZH": ["SKH"]
+    "SH W": ["SWH"]
+    "TH W": ["TWH"]
     "HH W": ["WH"]
+    "B W": ["PW"]
+    "G W": ["TKPW"]
+    "V W": ["W"]
+    "N Y":
+      - next: "AH"
+        stress: ["None"]
+        chords: ["TPH"]
+      - next: "ER"
+        stress: ["None"]
+        chords: ["TPH"]
+      - next: "UH"
+        chords: ["TPH"]
+      - next: "UW"
+        chords: ["TPH"]
+      - chords: ["TPWH"]
   codas:
     "B": ["-B"]
     "D": ["-D"]
     "JH": ["-PBLG"]
-    "F": ["-F"]
+    "F":
+      - prev: "ER"
+        chords: ["*FRB"]
+      - chords: ["-F"]
     "G": ["-G"]
-    "K": ["-BG"]
+    "K": ["-BG", "*G"]
     "L": ["-L"]
     "M": ["-PL", "-FR"]
     "N": ["-PB"]
     "P": ["-P"]
     "R": ["-R"]
-    "S": ["-S", "-F", "*F"]
+    "S":
+      - prev: "ER"
+        chords: ["-RS", "-FR", "*FR"]
+      - chords: ["-S", "-F", "*F"]
     "T": ["-T"]
-    "CH": ["-FP"]
-    "V": ["-F", "-FB"]
+    "CH":
+      - prev: "ER"
+        chords: ["-FRPB"]
+      - chords: ["-FP"]
+    "T CH": ["-FP"]
+    "V":
+      - prev: "ER"
+        chords: ["-FRB"]
+      - chords: ["-F", "-FB"]
     "Z": ["-Z", "-F", "*F"]
     "DH": ["*T"]
     "SH": ["-RB"]
     "ZH": ["-PBLG"]
     "TH": ["*T"]
+    "R SH": ["*RB"]
     "R CH": ["-FRPB"]
     "N CH": ["-FRPB"]
     "N JH": ["-FPBG"]
@@ -111,13 +157,22 @@ theory:
     "L F": ["-FL"]
     "L V": ["-FL"]
     "R V": ["-FRB"]
-    "S T": ["-FT", "*S"]
+    "R F": ["*FRB"]
+    "S T":
+      - prev: "ER"
+        chords: ["-FRT", "*RS"]
+      - chords: ["-FT", "*S"]
+    "K S T": ["-GT"]
+    "D S T": ["-DZ"]
+    "D TH": ["*TD"]
     "NG": ["-PBG"]
     "N K": ["-PBG"]
     "NG K": ["-PBG"]
     "NG G": ["-PBG"]
     "L M": ["-PBL"]
     "L P": ["-P", "-PL"]
+    "L B": ["*BL"]
+    "M F": ["-RPL"]
 
   prefixes:
     "IH K S":
@@ -173,10 +228,13 @@ theory:
       - stress: ["None"]
         position: ["Final"]
         chords: ["-SZ"]
+    "AH B AH L":
+      - stress: ["None"]
+        chords: ["-BL"]
     "AH":
       - stress: ["None"]
-        chords: ["", "U"]
         position: ["Medial"]
+        chords: ["", "U"]
     "ER":
       - stress: ["None"]
         position: ["Final"]
@@ -185,6 +243,10 @@ theory:
       - stress: ["None"]
         position: ["Final"]
         chords: ["-RZ", "*RZ"]
+    "IH NG":
+      - stress: ["None", "Secondary"]
+        position: ["Final"]
+        chords: ["-G"]
 
   spelling_conflicts:
     - chord: "AEU"
@@ -231,12 +293,14 @@ phonology:
       second: ["L"]
     - first: ["P", "B", "T", "D", "K", "G"]
       second: ["R", "W"]
+    - first: ["K"]
+      second: ["V"]
     # Allow voicless fricative, 'z', or 'v' plus approximant other than 'j'.
-    - first: ["F", "S", "Z", "TH", "SH"]
+    - first: ["F", "S", "Z"]
       second: ["L"]
     - first: ["F", "TH", "SH", "V"]
       second: ["R"]
-    - first: ["S", "Z", "HH", "V"]
+    - first: ["S", "Z", "SH", "TH", "HH", "V"]
       second: ["W"]
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["S"]
@@ -276,3 +340,18 @@ phonology:
       coda: "N"
       stress: ["None"]
       position: ["Medial", "Final"]
+    - onset: ""
+      vowel: "ER"
+      coda: ""
+      stress: ["None"]
+      position: ["Final"]
+    - onset: ""
+      vowel: "ER"
+      coda: "Z"
+      stress: ["None"]
+      position: ["Final"]
+    - onset: ""
+      vowel: "IH"
+      coda: "NG"
+      stress: ["None", "Secondary"]
+      position: ["Final"]
