@@ -60,12 +60,6 @@ theory:
       - next: "V"
         chords: ["KWRU"]
       - chords: ["KWRUR"]
-    "W AH":
-      - prev: "CH"
-        stress: ["None"]
-        chords: ["AOU"]
-      - chords: ["WU"]
-
   linkers:
     "AY": "KWR"
     "EY": "KWR"
@@ -80,11 +74,7 @@ theory:
 
   onsets:
     "B": ["PW"]
-    "CH":
-      - next: "W AH"
-        stress: ["None"]
-        chords: ["T"]
-      - chords: ["KH"]
+    "CH": ["KH"]
     "D": ["TK"]
     "DH": ["TH"]
     "F": ["TP"]
@@ -328,9 +318,6 @@ phonology:
   vowel_clusters:
     - first: ["Y"]
       second: ["UW", "UH", "AH"]
-    - first: ["W"]
-      second: ["AH"]
-
   multi_syllables:
     - onset: ""
       vowel: "IH"
