@@ -106,6 +106,9 @@ theory:
     "Y": ["KWR"]
     "Z": ["STK", "S*"]
     "ZH": ["SKH"]
+    "SH L": ["SKHR"]
+    "SH M": ["SKPH"]
+    "SH N": ["STKPH"]
     "SH W": ["SWH"]
     "TH W": ["TWH"]
     "HH W": ["WH"]
@@ -306,7 +309,7 @@ phonology:
     - first: ["K"]
       second: ["V"]
     # Allow voicless fricative, 'z', or 'v' plus approximant other than 'j'.
-    - first: ["F", "S", "Z"]
+    - first: ["F", "S", "Z", "SH"]
       second: ["L"]
     - first: ["F", "TH", "SH", "V"]
       second: ["R"]
@@ -315,6 +318,8 @@ phonology:
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["S"]
       second: ["P", "T", "K", "M", "N", "F", "TH"]
+    - first: ["SH"]
+      second: ["M", "N"]
     # Allow 'nj' clusters :3
     - first: ["N"]
       second: ["Y"]
