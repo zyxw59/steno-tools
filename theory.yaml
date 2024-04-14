@@ -250,6 +250,14 @@ theory:
       - stress: ["None", "Secondary"]
         position: ["Final"]
         chords: ["-G"]
+    "CH W AH S":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["TAOUS"]
+    "CH W AH":
+      - stress: ["None"]
+        position: ["Medial"]
+        chords: ["TAOU"]
 
   spelling_conflicts:
     - chord: "AEU"
@@ -360,3 +368,13 @@ phonology:
       coda: "NG"
       stress: ["None", "Secondary"]
       position: ["Final"]
+    - onset: "CH W"
+      vowel: "AH"
+      coda: "S"
+      stress: ["None"]
+      position: ["Final"]
+    - onset: "CH W"
+      vowel: "AH"
+      coda: ""
+      stress: ["None"]
+      position: ["Medial"]
