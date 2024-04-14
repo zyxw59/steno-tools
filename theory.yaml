@@ -94,6 +94,7 @@ theory:
     "Y": ["KWR"]
     "Z": ["STK", "S*"]
     "ZH": ["SKH"]
+    "TH W": ["TWH"]
     "HH W": ["WH"]
     "B W": ["PW"]
     "G W": ["TKPW"]
@@ -284,7 +285,7 @@ phonology:
       second: ["L"]
     - first: ["F", "TH", "SH", "V"]
       second: ["R"]
-    - first: ["S", "Z", "HH", "V"]
+    - first: ["S", "Z", "TH", "HH", "V"]
       second: ["W"]
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["S"]
