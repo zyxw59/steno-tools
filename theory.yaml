@@ -26,6 +26,8 @@ theory:
         chords: ["U"]
       - next: "V"
         chords: ["U"]
+      - next: "R"
+        chords: ["U"]
       - chords: ["UR"]
     "UH":
       - next_broad: "L"
@@ -316,7 +318,7 @@ phonology:
       second: ["W"]
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["S"]
-      second: ["P", "T", "K", "M", "N", "F", "TH"]
+      second: ["P", "T", "K", "M", "N", "F", "TH", "V"]
     - first: ["SH"]
       second: ["T", "M", "N"]
     # Allow 'nj' clusters :3
