@@ -207,6 +207,7 @@ impl GenerateOutlines {
             theory.disambiguate_spelling(outline.clone(), &entry_1.word, &entry_2.word)
         });
         generated_dict.remove_conflicts_with_valid_alternatives();
+        generated_dict.resolve_identical_conflicts();
         generated_dict.remove_errors_with_valid_alternatives();
         if let Some(out_path) = &self.out_file {
             serde_json::to_writer_pretty(BufWriter::new(File::create(out_path)?), &generated_dict)?;

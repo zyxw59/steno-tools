@@ -1,5 +1,6 @@
 use std::collections::{btree_map::Entry, BTreeMap, BTreeSet};
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -42,6 +43,19 @@ impl GeneratedDictionary {
                 if let Some(entry) = conflicts.pop_first() {
                     self.valid_outlines.insert(outline.clone(), entry);
                 }
+                removals.insert(outline.clone());
+            }
+        }
+        self.conflicts
+            .retain(|outline, _| !removals.contains(outline));
+    }
+
+    pub fn resolve_identical_conflicts(&mut self) {
+        let mut removals = BTreeSet::new();
+        for (outline, conflicts) in &mut self.conflicts {
+            if conflicts.iter().map(|entry| &entry.word).all_equal() {
+                self.valid_outlines
+                    .insert(outline.clone(), conflicts.pop_first().unwrap());
                 removals.insert(outline.clone());
             }
         }
