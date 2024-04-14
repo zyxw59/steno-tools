@@ -18,7 +18,7 @@ mod tree;
 mod wrapper_impls;
 
 use dictionary::{Dictionary, Word};
-use generated::{GeneratedDictionary, NoOutline};
+use generated::{GeneratedDictionary, NoOutline, Override};
 
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -144,6 +144,8 @@ struct GenerateOutlines {
     pronunciation_file: PathBuf,
     #[clap(short, long = "theory")]
     theory_file: PathBuf,
+    #[clap(short = 'O', long = "overrides")]
+    overrides_file: Option<PathBuf>,
     #[clap(short, long = "output")]
     out_file: Option<PathBuf>,
 }
@@ -206,6 +208,19 @@ impl GenerateOutlines {
             }
             theory.disambiguate_spelling(outline.clone(), &entry_1.word, &entry_2.word)
         });
+        if let Some(overrides_file) = &self.overrides_file {
+            let overrides: Vec<Override> =
+                serde_yaml::from_reader(BufReader::new(File::open(overrides_file)?))?;
+            for entry in overrides {
+                if !generated_dict.insert(
+                    entry.outline.clone(),
+                    entry.word.clone(),
+                    entry.pronunciation.clone(),
+                ) {
+                    eprintln!("Warning: override {entry:?} was a conflict");
+                }
+            }
+        }
         generated_dict.remove_conflicts_with_valid_alternatives();
         generated_dict.resolve_identical_conflicts();
         generated_dict.remove_errors_with_valid_alternatives();

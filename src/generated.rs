@@ -18,7 +18,8 @@ pub struct GeneratedDictionary {
 }
 
 impl GeneratedDictionary {
-    pub fn insert(&mut self, outline: Outline, word: Word, pronunciation: Pronunciation) {
+    /// Returns whether the outline was successfully inserted without any conflicts.
+    pub fn insert(&mut self, outline: Outline, word: Word, pronunciation: Pronunciation) -> bool {
         let new_entry = DictionaryEntry {
             word,
             pronunciation,
@@ -26,10 +27,14 @@ impl GeneratedDictionary {
         match self.conflicts.entry(outline.clone()) {
             Entry::Occupied(mut conflicts_entry) => {
                 conflicts_entry.get_mut().insert(new_entry);
+                false
             }
             Entry::Vacant(conflicts_entry) => {
                 if let Some(old_entry) = self.valid_outlines.insert(outline, new_entry.clone()) {
                     conflicts_entry.insert([old_entry, new_entry].into_iter().collect());
+                    false
+                } else {
+                    true
                 }
             }
         }
@@ -175,4 +180,11 @@ where
     D: serde::Deserializer<'de>,
 {
     String::deserialize(de).map(anyhow::Error::msg)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Override {
+    pub word: Word,
+    pub pronunciation: Pronunciation,
+    pub outline: Outline,
 }
