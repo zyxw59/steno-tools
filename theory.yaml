@@ -22,6 +22,8 @@ theory:
         chords: ["U"]
       - next: "F"
         chords: ["U"]
+      - next: "S"
+        chords: ["U"]
       - next: "V"
         chords: ["U"]
       - chords: ["UR"]
@@ -126,7 +128,10 @@ theory:
     "N": ["-PB"]
     "P": ["-P"]
     "R": ["-R"]
-    "S": ["-S", "-F", "*F"]
+    "S":
+      - prev: "ER"
+        chords: ["-RS", "-FR", "*FR"]
+      - chords: ["-S", "-F", "*F"]
     "T": ["-T"]
     "CH":
       - prev: "ER"
@@ -151,7 +156,10 @@ theory:
     "L V": ["-FL"]
     "R V": ["-FRB"]
     "R F": ["*FRB"]
-    "S T": ["-FT", "*S"]
+    "S T":
+      - prev: "ER"
+        chords: ["-FRT", "*RS"]
+      - chords: ["-FT", "*S"]
     "K S T": ["-GT"]
     "D S T": ["-DZ"]
     "D TH": ["*TD"]
