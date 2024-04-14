@@ -147,6 +147,7 @@ theory:
     "SH": ["-RB"]
     "ZH": ["-PBLG"]
     "TH": ["*T"]
+    "R SH": ["*RB"]
     "R CH": ["-FRPB"]
     "N CH": ["-FRPB"]
     "N JH": ["-FPBG"]
