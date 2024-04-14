@@ -188,6 +188,8 @@ impl GenerateOutlines {
                 }
             }
         }
+        generated_dict.remove_errors_with_valid_alternatives();
+        generated_dict.remove_conflicts_with_valid_alternatives();
         generated_dict.resolve_pairs(|outline, entry_1, entry_2| {
             if entry_1.pronunciation == entry_2.pronunciation {
                 return None;

@@ -30,6 +30,24 @@ impl GeneratedDictionary {
         }
     }
 
+    pub fn remove_conflicts_with_valid_alternatives(&mut self) {
+        let mut removals = BTreeSet::new();
+        for (outline, conflicts) in &mut self.conflicts {
+            conflicts.retain(|entry| !self.valid_outlines.words.contains_key(&entry.word));
+            if conflicts.len() <= 1 {
+                if let Some(entry) = conflicts.pop_first() {
+                    self.valid_outlines.insert(outline.clone(), entry);
+                }
+                removals.insert(outline.clone());
+            }
+        }
+        self.conflicts.retain(|outline, _| !removals.contains(outline));
+    }
+
+    pub fn remove_errors_with_valid_alternatives(&mut self) {
+        self.no_outlines.retain(|entry| !self.valid_outlines.words.contains_key(&entry.word))
+    }
+
     pub fn resolve_pairs(
         &mut self,
         mut f: impl FnMut(&Outline, &DictionaryEntry, &DictionaryEntry) -> Option<(Outline, Outline)>,
@@ -55,9 +73,7 @@ impl GeneratedDictionary {
                 insertions.insert(outline_2, entry_2.clone());
             }
         }
-        for outline in removals {
-            self.conflicts.remove(&outline);
-        }
+        self.conflicts.retain(|outline, _| !removals.contains(outline));
         for (outline, entry) in insertions {
             self.insert(outline, entry.word, entry.pronunciation);
         }
