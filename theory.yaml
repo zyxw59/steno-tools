@@ -99,6 +99,7 @@ theory:
     "SH L": ["SKHR"]
     "SH M": ["SKPH"]
     "SH N": ["STKPH"]
+    "SH T": ["STH"]
     "SH W": ["SWH"]
     "TH W": ["TWH"]
     "HH W": ["WH"]
@@ -317,7 +318,7 @@ phonology:
     - first: ["S"]
       second: ["P", "T", "K", "M", "N", "F", "TH"]
     - first: ["SH"]
-      second: ["M", "N"]
+      second: ["T", "M", "N"]
     # Allow 'nj' clusters :3
     - first: ["N"]
       second: ["Y"]
