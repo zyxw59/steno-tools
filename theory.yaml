@@ -96,6 +96,7 @@ theory:
     "Y": ["KWR"]
     "Z": ["STK", "S*"]
     "ZH": ["SKH"]
+    "SH W": ["SWH"]
     "TH W": ["TWH"]
     "HH W": ["WH"]
     "B W": ["PW"]
@@ -170,6 +171,7 @@ theory:
     "NG G": ["-PBG"]
     "L M": ["-PBL"]
     "L P": ["-P", "-PL"]
+    "L B": ["*BL"]
     "M F": ["-RPL"]
 
   prefixes:
@@ -298,7 +300,7 @@ phonology:
       second: ["L"]
     - first: ["F", "TH", "SH", "V"]
       second: ["R"]
-    - first: ["S", "Z", "TH", "HH", "V"]
+    - first: ["S", "Z", "SH", "TH", "HH", "V"]
       second: ["W"]
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["S"]
