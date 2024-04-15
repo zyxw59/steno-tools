@@ -1077,7 +1077,7 @@ mod tests {
     #[test_case("AO1 L", "AUL" ; "all")]
     #[test_case("Y AH1 NG", "KWRUPBG" ; "young")]
     #[test_case("EH1 M Y AH0 L EY2 T", "E/PHAOU/HRAEUT" ; "emulate")]
-    #[test_case("M AE1 R IY0", "PHE/RAOE" ; "marry")]
+    #[test_case("M AE1 R IY0", "PHA*EURD" ; "marry")]
     #[test_case("IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
     #[test_case("IH0 K S CH EY2 N JH", "KPHAEUFPBG" ; "exchange")]
     #[test_case("D IH1 S T AH0 N T", "STKUPBT" ; "distant")]
