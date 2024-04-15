@@ -158,6 +158,7 @@ theory:
     "TH": ["*T"]
     "R SH": ["*RB"]
     "R CH": ["-FRPB"]
+    "R B": ["-RB", "*RB"]
     "N CH": ["-FRPB"]
     "N JH": ["-FPBG"]
     "L CH": ["-LG"]
