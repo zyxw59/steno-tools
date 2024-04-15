@@ -6,6 +6,7 @@ use std::{
 };
 
 use clap::Parser;
+use itertools::Itertools;
 use serde_json::from_reader;
 
 mod chord;
@@ -26,6 +27,8 @@ fn main() -> anyhow::Result<()> {
         Command::Compare(args) => args.execute(),
         Command::Categorize(args) => args.execute(),
         Command::GenerateOutlines(args) => args.execute(),
+        Command::DisambiguateSpelling(args) => args.execute(),
+        Command::AllOutlines(args) => args.execute(),
         Command::CompoundWords(args) => args.execute(),
     }
 }
@@ -44,6 +47,10 @@ enum Command {
     Categorize(Categorize),
     /// Generate outlines given a word list, pronunciation dictionary, and theory
     GenerateOutlines(GenerateOutlines),
+    /// Show the possible spelling disambiguations for a pair of words
+    DisambiguateSpelling(DisambiguateSpelling),
+    /// Show all possible outlines for a given word
+    AllOutlines(AllOutlines),
     /// Generate a file listing compound words, using the specified pronunciation dictionary
     CompoundWords(CompoundWords),
 }
@@ -168,8 +175,12 @@ impl GenerateOutlines {
             .lines()
             .map_while(Result::ok)
             .map(Word::from)
+            .collect::<Vec<_>>();
+        let words_lower = words
+            .iter()
+            .map(|word| Word::from(word.to_ascii_lowercase()))
             .collect::<BTreeSet<_>>();
-        pronunciation_dict.retain_words(|word| words.contains(word));
+        pronunciation_dict.retain_words(|word| words_lower.contains(word));
         for word in words {
             let prons = pronunciation_dict.get(&word);
             if prons.is_empty() {
@@ -273,6 +284,76 @@ impl CompoundWords {
             serde_yaml::to_writer(BufWriter::new(File::create(out_path)?), &compounds)?;
         } else {
             serde_yaml::to_writer(io::stdout().lock(), &compounds)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, clap::Args)]
+struct DisambiguateSpelling {
+    word_1: String,
+    word_2: String,
+    #[clap(short, long)]
+    pronunciation: String,
+    #[clap(short, long = "theory")]
+    theory_file: PathBuf,
+}
+
+impl DisambiguateSpelling {
+    fn execute(&self) -> anyhow::Result<()> {
+        use itertools::EitherOrBoth;
+        let theory: theory::PhoneticTheory =
+            serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
+        let outline = theory.get_outline(&pronounce::Pronunciation::from(&*self.pronunciation))?;
+        for pair in theory
+            .spelling_options(outline.clone(), &self.word_1)
+            .into_iter()
+            .zip_longest(theory.spelling_options(outline.clone(), &self.word_2))
+        {
+            match pair {
+                EitherOrBoth::Both(left, right) => println!("{left} / {right}"),
+                EitherOrBoth::Left(left) => println!("{left} / [---]"),
+                EitherOrBoth::Right(right) => println!("[---] / {right}"),
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, clap::Args)]
+struct AllOutlines {
+    word: String,
+    #[clap(short, long = "pronunciations", required = true)]
+    pronunciation_file: Vec<PathBuf>,
+    #[clap(short, long = "theory")]
+    theory_file: PathBuf,
+}
+
+impl AllOutlines {
+    fn execute(&self) -> anyhow::Result<()> {
+        let pronunciation_dict = self.pronunciation_file.iter().try_fold(
+            pronounce::Dictionary::default(),
+            |mut acc, filename| -> anyhow::Result<_> {
+                acc.merge(pronounce::Dictionary::load(BufReader::new(File::open(
+                    filename,
+                )?))?);
+                Ok(acc)
+            },
+        )?;
+        let theory: theory::PhoneticTheory =
+            serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
+        let prons = pronunciation_dict.get(&self.word);
+        if prons.is_empty() {
+            return Err(anyhow::anyhow!("No pronunciations"));
+        }
+        for pron in prons {
+            println!("{pron}:");
+            match theory.get_outlines_vec(pron) {
+                Ok(outlines) => for outline in outlines {
+                    println!("{outline}");
+                }
+                Err(err) => eprintln!("{err}"),
+            }
         }
         Ok(())
     }

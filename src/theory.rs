@@ -24,10 +24,7 @@ pub struct PhoneticTheory {
 
 impl PhoneticTheory {
     pub fn get_outline(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Outline> {
-        self.get_outline_tree(pronunciation)?
-            .as_ref()
-            .paths()
-            .with_collect_copied()
+        outline_tree_iter(&self.get_outline_tree(pronunciation)?)
             .next()
             .ok_or_else(|| {
                 anyhow::anyhow!(
@@ -42,10 +39,7 @@ impl PhoneticTheory {
         first: &[Phoneme],
         second: &[Phoneme],
     ) -> anyhow::Result<Outline> {
-        self.get_outline_tree_compound(first, second)?
-            .as_ref()
-            .paths()
-            .with_collect_copied()
+        outline_tree_iter(&self.get_outline_tree_compound(first, second)?)
             .next()
             .ok_or_else(|| {
                 anyhow::anyhow!(
@@ -54,6 +48,10 @@ impl PhoneticTheory {
                     PronunciationSlice(second),
                 )
             })
+    }
+
+    pub fn get_outlines_vec(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Vec<Outline>> {
+        Ok(outline_tree_iter(&self.get_outline_tree(pronunciation)?).collect())
     }
 
     fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Tree<OutlinePiece>> {
@@ -136,7 +134,7 @@ impl PhoneticTheory {
         disambiguate_iters(outline, outlines_1, outlines_2)
     }
 
-    fn spelling_options(&self, outline: Outline, spelling: &str) -> Vec<Outline> {
+    pub fn spelling_options(&self, outline: Outline, spelling: &str) -> Vec<Outline> {
         let mut possible_outlines = vec![outline];
         let mut next_outlines = Vec::new();
         for conflict_rule in &self.theory.spelling_conflicts {
@@ -288,6 +286,13 @@ impl PhoneticTheory {
         }
         possible_outlines
     }
+}
+
+fn outline_tree_iter(outlines: &Tree<OutlinePiece>) -> impl Iterator<Item = Outline> + '_ {
+    outlines
+            .as_ref()
+            .paths()
+            .with_collect_copied()
 }
 
 fn disambiguate_iters<T, U, I1, I2>(initial: T, left: I1, right: I2) -> Option<(T, T)>
