@@ -40,6 +40,44 @@ impl GeneratedDictionary {
         }
     }
 
+    /// Inserts the word, ignoring conflicts.
+    ///
+    /// If the outline is already used by other entries, those entries will be put in the "no
+    /// outlines" section.
+    ///
+    /// Returns whether the outline was inserted without any conflicts.
+    pub fn insert_force(
+        &mut self,
+        outline: Outline,
+        word: Word,
+        pronunciation: Pronunciation,
+    ) -> bool {
+        let new_entry = DictionaryEntry {
+            word,
+            pronunciation,
+        };
+        let mut success = true;
+        if let Entry::Occupied(conflicts_entry) = self.conflicts.entry(outline.clone()) {
+            let conflicts = conflicts_entry.remove();
+            self.no_outlines
+                .extend(conflicts.into_iter().map(|entry| NoOutline {
+                    word: entry.word,
+                    pronunciation: entry.pronunciation,
+                    error: anyhow::anyhow!("forced out by {new_entry:?}"),
+                }));
+            success = false;
+        }
+        if let Some(old_entry) = self.valid_outlines.insert_force(outline, new_entry.clone()) {
+            self.no_outlines.push(NoOutline {
+                word: old_entry.word,
+                pronunciation: old_entry.pronunciation,
+                error: anyhow::anyhow!("forced out by {new_entry:?}"),
+            });
+            success = false;
+        }
+        success
+    }
+
     pub fn remove_conflicts_with_valid_alternatives(&mut self) {
         let mut removals = BTreeSet::new();
         for (outline, conflicts) in &mut self.conflicts {
@@ -139,6 +177,29 @@ impl Dictionary {
             }
         }
         None
+    }
+
+    pub fn insert_force(
+        &mut self,
+        outline: Outline,
+        new_entry: DictionaryEntry,
+    ) -> Option<DictionaryEntry> {
+        let old_entry = self.outlines.insert(outline.clone(), new_entry.clone());
+        if let Some(old_entry) = &old_entry {
+            if old_entry.word != new_entry.word {
+                if let Some(outlines) = self.words.get_mut(&old_entry.word) {
+                    outlines.remove(&outline);
+                    if outlines.is_empty() {
+                        self.words.remove(&old_entry.word);
+                    }
+                }
+            }
+        }
+        self.words
+            .entry(new_entry.word.clone())
+            .or_default()
+            .insert(outline);
+        old_entry
     }
 }
 

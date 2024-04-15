@@ -219,7 +219,7 @@ impl GenerateOutlines {
             let overrides: Vec<Override> =
                 serde_yaml::from_reader(BufReader::new(File::open(overrides_file)?))?;
             for entry in overrides {
-                if !generated_dict.insert(
+                if !generated_dict.insert_force(
                     entry.outline.clone(),
                     entry.word.clone(),
                     entry.pronunciation.clone(),
