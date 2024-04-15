@@ -7003,6 +7003,7 @@ contracted
 contractibility
 contractile
 contraction
+contractions
 contractor
 contracts
 contractual
@@ -19096,6 +19097,7 @@ laggard
 laggards
 lagged
 lagging
+laggy
 lagoon
 lags
 laid
