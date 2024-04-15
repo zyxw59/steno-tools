@@ -261,6 +261,26 @@ theory:
       - stress: ["None"]
         position: ["Medial"]
         chords: ["TAOU"]
+    "L AH T":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-LT"]
+    "L IY":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["*L"]
+    "IY":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["*D"]
+    "IY Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["*DZ"]
+    "IH D":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-D"]
 
   spelling_conflicts:
     - chord: "AEU"
@@ -330,54 +350,89 @@ phonology:
     - first: ["Y"]
       second: ["UW", "UH", "AH"]
   multi_syllables:
+    # "IH K S" /iks/ "ex-"
     - onset: ""
       vowel: "IH"
       coda: "K S"
       stress: ["None"]
       position: ["Initial"]
+    # "D IH S" /dis/ "dis-", "des-"
     - onset: "D"
       vowel: "IH"
       coda: "S"
+    # "AH B AH L" /əbəl/ "-able", "-ible"
     - onset: ""
       vowel: "AH"
       coda: "B AH L"
       stress: ["None"]
-    - onset: ""
-      vowel: "AH"
-      coda: ""
-      stress: ["None"]
-      position: ["Medial"]
+    # "K SH AH N" /kʃən/ "-ction"
     - onset: "K SH"
       vowel: "AH"
       coda: "N"
       stress: ["None"]
+    # "SH AH N" /ʃən/ "-tion", "-sion"
     - onset: "SH"
       vowel: "AH"
       coda: "N"
       stress: ["None"]
       position: ["Medial", "Final"]
+    # "AH" /ə/ (medial schwa)
+    - onset: ""
+      vowel: "AH"
+      coda: ""
+      stress: ["None"]
+      position: ["Medial"]
+    # "ER" /ər/ "-er", "-or"
     - onset: ""
       vowel: "ER"
       coda: ""
       stress: ["None"]
       position: ["Final"]
+    # "ER Z" /ərz/ "-ers", "-ors"
     - onset: ""
       vowel: "ER"
       coda: "Z"
       stress: ["None"]
       position: ["Final"]
+    # "IH NG" /iŋ/ "-ing"
     - onset: ""
       vowel: "IH"
       coda: "NG"
       stress: ["None", "Secondary"]
       position: ["Final"]
+    # "CH W AH S" /tʃwəs/ "-tuous"
     - onset: "CH W"
       vowel: "AH"
       coda: "S"
       stress: ["None"]
       position: ["Final"]
+    # "CH W AH" /tʃwə/ "-tua-"
     - onset: "CH W"
       vowel: "AH"
       coda: ""
       stress: ["None"]
       position: ["Medial"]
+    # "L IY" /lij/ "-ly"
+    - onset: "L"
+      vowel: "IY"
+      coda: ""
+      stress: ["None"]
+      position: ["Final"]
+    # "IY" /ij/ "-y", "-ie"
+    - onset: ""
+      vowel: "IY"
+      coda: ""
+      stress: ["None"]
+      position: ["Final"]
+    # "IY Z" /ijz/ "-ies"
+    - onset: ""
+      vowel: "IY"
+      coda: "Z"
+      stress: ["None"]
+      position: ["Final"]
+    # "IH D" /id/ "-ed"
+    - onset: ""
+      vowel: "IH"
+      coda: "D"
+      stress: ["None"]
+      position: ["Final"]
