@@ -99,6 +99,7 @@ theory:
     "Y": ["KWR"]
     "Z": ["STK", "S*"]
     "ZH": ["SKH"]
+    "SH R": ["SHR", "SHR*"]
     "SH L": ["SKHR"]
     "SH M": ["SKPH"]
     "SH N": ["STKPH"]
