@@ -73,6 +73,7 @@ theory:
     "UW": "W"
     "AA": "W"
     "AO": "W"
+    "ER": "R"
 
   onsets:
     "B": ["PW"]
