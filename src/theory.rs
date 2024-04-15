@@ -1085,6 +1085,7 @@ mod tests {
     #[test_case("G AH1 M P SH AH0 N", "TKPWUFRPGS" ; "gumption")]
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
     #[test_case("W IH DH D R AO1 AH0 L", "W*EUT/TKRO/WUL" ; "withdrawal")]
+    #[test_case("S T EY1 SH AH0 N EH2 R IY0", "STAEUGS/A*EURD" ; "stationary")]
     fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
