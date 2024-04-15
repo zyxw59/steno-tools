@@ -306,12 +306,38 @@ theory:
           replace: "SR"
         - pattern: "s"
           replace: "S"
+    - chord: "K"
+      rules:
+        - pattern: "ch"
+          replace: "KH"
+        - pattern: "[ck]"
+          replace: "K"
+    - chord: "R"
+      rules:
+        - pattern: "wr"
+          replace: "WR"
+        - pattern: "r"
+          replace: "R"
+    - chord: "AO"
+      rules:
+        - pattern: "ew"
+          replace: "AOU"
+        - pattern: "ue"
+          replace: "AO"
     - chord: "OE"
       rules:
         - pattern: "oa"
           replace: "AO"
         - pattern: "o.[aeiouy]"
           replace: "OE"
+    - chord: "OL"
+      rules:
+        - pattern: "oll"
+          replace: "OL"
+        - pattern: "o[uw]l"
+          replace: "OUL"
+        - pattern: "ol[aeiouy]"
+          replace: "OEL"
     - chord: "O"
       rules:
         - pattern: "[ao]u"
@@ -320,6 +346,24 @@ theory:
           replace: "AU"
         - pattern: "o"
           replace: "O"
+    - chord: "PHUPB"
+      rules:
+        - pattern: "man"
+          replace: "PHAPB"
+        - pattern: "men"
+          replace: "PHEPB"
+    - chord: "-BG"
+      rules:
+        - pattern: "ck"
+          replace: "-BG"
+        - pattern: "c$"
+          replace: "*BG"
+    - chord: "-T"
+      rules:
+        - pattern: "ed$"
+          replace: "-D"
+        - pattern: "t$"
+          replace: "-FT"
 
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
