@@ -176,7 +176,7 @@ theory:
     "D TH": ["*TD"]
     "NG": ["-PBG"]
     "N K": ["-PBG"]
-    "NG K": ["-PBG"]
+    "NG K": ["-PBG", "*PBG"]
     "NG G": ["-PBG"]
     "L M": ["-PBL"]
     "L P": ["-P", "-PL"]
