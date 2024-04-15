@@ -58,6 +58,8 @@ impl PhoneticTheory {
 
     fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Tree<OutlinePiece>> {
         let syllables = self.phonology.syllable_tree(pronunciation);
+        #[cfg(test)]
+        eprintln!("syllables: {syllables:#?}");
         if syllables.is_empty() {
             return Err(anyhow::anyhow!(
                 "no syllabification found for word {}",
@@ -1095,7 +1097,7 @@ mod tests {
                 format!("{}", piece.stroke)
             }
         });
-        eprintln!("outlines: {outline_tree:?}");
+        eprintln!("outlines: {outline_tree:#?}");
         let actual_outline = outlines
             .as_ref()
             .paths()
