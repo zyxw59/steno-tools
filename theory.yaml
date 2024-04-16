@@ -207,6 +207,12 @@ theory:
     "IH N T":
       - position: ["Initial"]
         chords: ["SPW"]
+    "IH M P":
+      - position: ["Initial"]
+        chords: ["KPW"]
+    "IH M B":
+      - position: ["Initial"]
+        chords: ["KPW"]
     "K AA N":
       - take_next: "T"
         position: ["Initial"]
@@ -242,6 +248,8 @@ theory:
         chords: ["STK"]
       - take_next: "K"
         chords: ["STK"]
+      - take_next: "G"
+        chords: ["STKPW"]
       - chords: ["STK"]
     "D IH Z":
       - chords: ["STK"]
@@ -469,6 +477,16 @@ phonology:
     - onset: ""
       vowel: "IH"
       coda: "N T"
+      position: ["Initial"]
+    # "IH M P" /imp/ "imp-", "emp-"
+    - onset: ""
+      vowel: "IH"
+      coda: "M P"
+      position: ["Initial"]
+    # "IH M B" /imb/ "imb-", "emb-"
+    - onset: ""
+      vowel: "IH"
+      coda: "M B"
       position: ["Initial"]
     # "D IH S" /dis/ "dis-", "des-"
     - onset: "D"
