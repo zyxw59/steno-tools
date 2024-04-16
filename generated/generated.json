@@ -95,6 +95,7 @@
     "SPW/REFTD": "interested",
     "SPW/PH*USD": "intimacy",
     "SPW/TKPWRULZ": "integrals",
+    "SH": "shh",
     "TPH": "in",
     "SR": "have",
     "A/TPHA/HREU/SEUS": "analysis",
@@ -1258,6 +1259,8 @@
     "SKWRA/TPHEU/TO/RAOE/KWRUL": "janitorial",
     "SKWRA/TKPWAR": "jaguar",
     "SKWRA/PWUR/WUBG": "jabberwock",
+    "SKWRA/WHRUPB": "javelin",
+    "SKWRA/WHREUPB": "javelin",
     "SKWRA/KUL": "jackal",
     "SKWRA/PWURG": "jabbering",
     "SKWRA/KUT": "jacket",
@@ -3590,6 +3593,7 @@
     "TKE/TPUR/REPB/KHUL": "deferential",
     "TKE/TPUR/RUPBS": "deference",
     "TKE/KHRUR/RAEUGS": "declaration",
+    "TKE/WHREURB": "devilish",
     "TKE/STUPB": "destine",
     "TKE/TKUPB": "deaden",
     "TKE/TPUPB": "deafen",
@@ -5894,6 +5898,7 @@
     "PWAOE/TKPWULZ": "beagles",
     "PWAOE/KWREUPBGZ": "beings",
     "PWAOE/SAOEUDZ": "besides",
+    "TKPWAOE/KWROE/STKU": "gyoza",
     "TKPWAOE/KAOE/KWRUFT": "geekiest",
     "TKPWAOE/PAOE/KWRES": "gps",
     "TKPWAOE/KWRAOU/TAOEPB": "guillotine",
@@ -5904,6 +5909,7 @@
     "HAOE/PHOE/TPEU/HRAOE/KWRABG": "hemophiliac",
     "HAOE/PHOE/TPEUL/KWRABG": "hemophiliac",
     "HAOE/ROE": "hero",
+    "HAOE/HAOE": "hehe",
     "HAOE/HRAOE/KWROE/SEPB/TREUBG": "heliocentric",
     "HAOE/HRAOE/KWRUPL": "helium",
     "HAOE/KWRU": "hiya",
@@ -7191,6 +7197,7 @@
     "SKWRAOE/KWROE/PAUL/TEUBGS": "geopolitics",
     "SKWRAOE/KWROE/SEUPBG/KRU/TPHUS": "geosynchronous",
     "SKWRAOE/KWROE/TPEUZ/KUL": "geophysical",
+    "SKWRAOE/PAOE/KWRAOU": "gpu",
     "SKWRAOE/TPHAOE/KWRO/HRO/SKWREU/KUL": "genealogical",
     "SKWRAOE/TPHAOE/KWRO/HRO*PBLGD": "genealogy",
     "SKWRAOE/TPHAOE/KWRAUL/SKWREUFT": "genealogist",
@@ -7261,6 +7268,7 @@
     "SHRAOE/PAOE/TPHUS": "sleepiness",
     "SHRAOE/STKAOER": "sleazier",
     "SHRAOE/PHRUS": "sleepless",
+    "SHRAOE/WHREUS": "sleeveless",
     "THRAOE": "three",
     "THRAOE/SUPL": "threesome",
     "KHRAOE/SHAEU": "cliche",
@@ -8638,6 +8646,8 @@
     "STU/TEU/STEUBG": "statistic",
     "STU/TEU/STEUBG/*L": "statistically",
     "STU/TEU/STEUBGS": "statistics",
+    "STU/TKAEUR": "stderr",
+    "STU/TKEUPB": "stdin",
     "STU/PWURPB": "stubborn",
     "STU/PWUL": "stubble",
     "STU/PW*URPBL": "stubbornly",
@@ -8645,6 +8655,7 @@
     "STU/TKAOEG": "studying",
     "STU/TURG": "stuttering",
     "STU/PHUBG": "stomach",
+    "STU/TKOUT": "stdout",
     "STU/PHUBGS": "stomachs",
     "STU/KOED": "stuccoed",
     "STU/TKAOED": "studied",
@@ -9344,6 +9355,7 @@
     "PWU/TAOEBG": "batik",
     "PWU/TUBG": "buttock",
     "PWU/HROEPBG/O": "bologna",
+    "PWU/TRO*ET": "betroth",
     "PWU/TPUT": "buffet",
     "PWU/KEUT": "bucket",
     "PWU/SKWREUT": "budget",
@@ -10182,6 +10194,9 @@
     "HRU/STAOE/TPHUS": "lustiness",
     "HRU/KAOE/KWRUFT": "luckiest",
     "HRU/KAOE/TPHUS": "luckiness",
+    "HRU/WHRAOE/KWRUFT": "loveliest",
+    "HRU/WHRAOE/TPHUS": "loveliness",
+    "HRU/PHOU": "lmao",
     "HRU/SKWREU/STEU/KUL": "logistical",
     "HRU/SKWREU/STEUBG": "logistic",
     "HRU/SKWREU/STEUBG/*L": "logistically",
@@ -10191,9 +10206,11 @@
     "HRU/THAR/SKWREUBG": "lethargic",
     "HRU/THAR/SKWREUBG/*L": "lethargically",
     "HRU/KAOER": "luckier",
+    "HRU/WHRAOER": "lovelier",
     "HRU/TUR/SKWREU/KUL": "liturgical",
     "HRU/TKPWAOPB": "lagoon",
     "HRU/TRAOEPB": "latrine",
+    "HRU/WHRURPB": "lovelorn",
     "HRU/STKAO*L": "lazuli",
     "HRU/PEL": "lapel",
     "HRU/SREUPBG/*L": "lovingly",
@@ -10483,6 +10500,7 @@
     "TAOU/TEU/HREUPBLG": "tutelage",
     "TAOU/EUGS": "tuition",
     "KAOU": "cue",
+    "KAOU/TAOE": "qt",
     "KAOU/TPHAOE/TPORPL": "cuneiform",
     "KAOU/RAOE/KWROE": "curio",
     "KAOU/RAOE/SHRAOE": "curiously",
@@ -11123,8 +11141,8 @@
     "EU/SRAUFLG": "evolving",
     "EU/TPHOEBLG": "ennobling",
     "EU/TPHAEUBLG": "enabling",
+    "EU/PHAPBLG/TPHU/TEU/WHRAOE": "imaginatively",
     "EU/PHAPBLG/TPHU/TEUF": "imaginative",
-    "EU/PHAPBLG/TPHU/TEUF/HRAOE": "imaginatively",
     "EU/PHAPBLG/TPHU/PWUL": "imaginable",
     "EU/PHAPBLG/TPH*UBL": "imaginably",
     "EU/PHAPBLG/TPHEUPBG": "imagining",
@@ -11305,6 +11323,7 @@
     "EU/SRAEUDZ": "evades",
     "EU/TPHURDZ": "innards",
     "SEU/STO/HREUBG": "systolic",
+    "SEU/RO/KHU": "sriracha",
     "SEU/HRO/SKWREU/STKUPL": "syllogism",
     "SEU/KHAO/WAEUT": "situate",
     "SEU/KHAO/WAEUGS": "situation",
@@ -11509,6 +11528,7 @@
     "KEU/TUPBZ": "kittens",
     "KEU/KHUPBZ": "kitchens",
     "KEU/HREUPBGZ": "killings",
+    "SKEU/TKA/TKUL": "skedaddle",
     "SKEU/PHA/TEUBG": "schematic",
     "SKEU/PHA/TEUBG/*L": "schematically",
     "SKEU/PHA/TEUBGS": "schematics",
@@ -13720,6 +13740,7 @@
     "KAEU/REU/PWAO": "caribou",
     "KAEU/RAOER": "carrier",
     "KAEU/TUR/R-R": "caterer",
+    "KAEU/POP": "kpop",
     "KAEU/POPB": "capon",
     "KAEU/KWREPB": "cayenne",
     "KAEU/SAOEPB": "casein",
@@ -14302,6 +14323,8 @@
     "SKWRAEU/RAOE/KWRA/TREUBGS": "geriatrics",
     "SKWRAEU/RAOE/KOPB": "jerrycan",
     "SKWRAEU/RAOE/PHAPBD/-R": "gerrymander",
+    "SKWRAEU/SOPB": "json",
+    "SKWRAEU/PEG": "jpeg",
     "SKWRAEU/WOBG": "jaywalk",
     "SKWRAEU/WOBG/-G": "jaywalking",
     "SKWRAEU/RUPBD": "gerund",
@@ -14991,6 +15014,7 @@
     "WAOEU/STKUFT": "wisest",
     "WAOEU/TEUFT": "whitest",
     "WAOEU/KWRURD": "wired",
+    "WAOEU/TEPBD": "whitened",
     "WAOEU/TKUPBZ": "widens",
     "TWAOEU/HRAOEUT": "twilight",
     "KWAOEU/KWRE/SUPBT": "quiescent",
@@ -15437,6 +15461,9 @@
     "HRAOEU": "lie",
     "HRAOEU/PWE/HRUS": "libelous",
     "HRAOEU/KHRAOE/HAOD": "likelihood",
+    "HRAOEU/WHRAOE/TPHUS": "liveliness",
+    "HRAOEU/WHRAOE/HAOD": "livelihood",
+    "HRAOEU/WHRAOE/HAODZ": "livelihoods",
     "HRAOEU/TPHU/STKAEUGS": "lionization",
     "HRAOEU/PWRAEU/RAOE": "library",
     "HRAOEU/PWRAEU/RAOE/KWRUPB": "librarian",
@@ -15658,7 +15685,6 @@
     "TKEF": "deaf",
     "TKEF/TPHEU/STKPH*UL": "definitionally",
     "TKEF/STAEU/TUD": "devastated",
-    "TKEF/HREURB": "devilish",
     "TKEF/TPHEUPBG": "deafening",
     "TKEF/SUT": "deficit",
     "TKEF/TPHUT": "definite",
@@ -15759,7 +15785,6 @@
     "TKPWRAOEF/SHRAOE": "grievously",
     "HRAOEF": "leaf",
     "SHRAOEF": "sleeve",
-    "SHRAOEF/HREUS": "sleeveless",
     "KHRAOEF": "cleave",
     "UF": "of",
     "SUF/KAEUT": "suffocate",
@@ -15798,10 +15823,6 @@
     "PRUF/AOUS": "profuse",
     "TKPWRUF": "gruff",
     "HRUF": "luff",
-    "HRUF/HRAOE/KWRUFT": "loveliest",
-    "HRUF/HRAOE/TPHUS": "loveliness",
-    "HRUF/HRAOER": "lovelier",
-    "HRUF/HRURPB": "lovelorn",
     "HRUF/SEUBG": "lovesick",
     "HRUF/SAOET": "loveseat",
     "SHRUF": "slough",
@@ -15939,9 +15960,6 @@
     "TKPRAOEUF": "deprive",
     "SKWRAOEUF": "jive",
     "HRAOEUF": "life",
-    "HRAOEUF/HRAOE/TPHUS": "liveliness",
-    "HRAOEUF/HRAOE/HAOD": "livelihood",
-    "HRAOEUF/HRAOE/HAODZ": "livelihoods",
     "HRAOEUF/SAEUFR": "lifesaver",
     "HRAOEUF/SPAPB": "lifespan",
     "HRAOEUF/HRAOEUPB": "lifeline",
@@ -18291,6 +18309,7 @@
     "TAEUR/RAOEU/STKEUZ": "terrorizes",
     "TAEUR/-R": "terror",
     "TAEUR/TPAOEUG": "terrifying",
+    "TAEUR/TKABG/TUL": "pterodactyl",
     "TAEUR/SEUPBG": "terracing",
     "TAEUR/PWAOEUT": "terabyte",
     "TAEUR/REUFT": "terrorist",
@@ -21535,10 +21554,10 @@
     "KWOPB/TKRAOE": "quandary",
     "KWOPB/TU": "quanta",
     "KWOPB/TEU/TAEU/TEUF": "quantitative",
-    "KWOPB/TEU/TAEU/T*UFL": "quantitatively",
     "KWOPB/TEU/TPAOEU": "quantify",
     "KWOPB/TEU/TPAOEU/PWEL": "quantifiable",
     "KWOPB/TEU/TPAOEUG": "quantifying",
+    "KWOPB/TEU/TAEUT/WHRAOE": "quantitatively",
     "KWOPB/TEU/TPAOEUD": "quantified",
     "KWOPB/TEUF/KAEUGS": "quantification",
     "KWOPB/TUPL": "quantum",
@@ -22395,8 +22414,8 @@
     "UPB/SUR/TUPB": "uncertain",
     "UPB/SUR/T*UPBTD": "uncertainty",
     "UPB/SUR/T*UPBTDZ": "uncertainties",
+    "UPB/TKUR/PREU/WHRUPBLGD": "underprivileged",
     "UPB/TKUR/TAEU/KEUPBGZ": "undertakings",
-    "UPB/TKUR/PREUF/HRUPBLGD": "underprivileged",
     "UPB/TKUR/STAPB/TKEUPBG/*L": "understandingly",
     "UPB/TKUR/WEPBL": "underwhelm",
     "UPB/TKUR/WEPBLG": "underwhelming",
@@ -23660,8 +23679,8 @@
     "EUPB/SKWRUPBG/-GS": "injunction",
     "EUPB/SKWRUPBG/-BGS": "injunction",
     "EUPB/STEUPBG/KHAO/WUL": "instinctual",
+    "EUPB/STEUPBG/TEU/WHRAOE": "instinctively",
     "EUPB/STEUPBG/TEUF": "instinctive",
-    "EUPB/STEUPBG/TEUF/HRAOE": "instinctively",
     "EUPB/STKEUPBG/TKPWEURB/-BL": "indistinguishable",
     "EUPB/KHRAOEUPBG": "inclining",
     "EUPB/TAFPBG/-BL": "intangible",
@@ -26028,6 +26047,7 @@
     "SPAO*EURL": "spirally",
     "S*EFRL": "severally",
     "AEUFRL/SHRAOE": "aimlessly",
+    "PH-PL": "mmm",
     "APL": "am",
     "APL/RE/TOE": "amaretto",
     "APL/PWROE/SKHU": "ambrosia",
@@ -26849,8 +26869,8 @@
     "KUPL/PHRAOEU/KWRUPBS": "compliance",
     "KUPL/PWUR/SUPL": "cumbersome",
     "KUPL/PAEUR": "compare",
+    "KUPL/PAEUR/TEU/WHRAOE": "comparatively",
     "KUPL/PAEUR/TEUF": "comparative",
-    "KUPL/PAEUR/TEUF/HRAOE": "comparatively",
     "KUPL/PAEUR/TUR": "comparator",
     "KUPL/PAEUR/SUPB": "comparison",
     "KUPL/PAEUR/SUPBZ": "comparisons",
@@ -27589,6 +27609,7 @@
     "KOFPL/TAUL/SKWREUFT": "cosmetologist",
     "KOFPL/PAUL/TUPB": "cosmopolitan",
     "KOFPL/TKPW*UPBD": "cosmogony",
+    "H*FPL": "hmpf",
     "SKRA*FPL": "scratchily",
     "EFPL/TPHOD": "esplanade",
     "SK*EFPL": "sketchily",
@@ -28104,6 +28125,7 @@
     "KHROG": "clog",
     "KHROG/-G": "clogging",
     "TPHROG": "flog",
+    "WHROG": "vlog",
     "PWHROG": "blog",
     "PWHROG/-R": "blogger",
     "PWHROG/-G": "blogging",
@@ -30232,6 +30254,7 @@
     "PHUFBG/RAT": "muskrat",
     "PWRUFBG": "brusque",
     "PWRUFBG/*L": "brusquely",
+    "TEUFBG": "tsk",
     "TKEUFBG": "disk",
     "TKEUFBG/US": "discus",
     "TPEUFBG/*L": "fiscally",
@@ -34917,6 +34940,7 @@
     "PH*EULGT": "milked",
     "SREPBLGT/-BL": "vegetable",
     "SREPBLGT/PWULZ": "vegetables",
+    "PHR-S": "pls",
     "AS": "ass",
     "AS/TPHAOEUPB": "asinine",
     "AS/HOL": "asshole",
@@ -35330,7 +35354,7 @@
     "KPAOUS": "excuse",
     "PHAOUS/HREUPBLG": "mucilage",
     "S*US": "suss",
-    "PW*US": "buss",
+    "PW*US": "bust",
     "PH*US/*D": "musty",
     "R*US": "rust",
     "EUS/PROE/PUL": "isopropyl",
@@ -37530,6 +37554,7 @@
     "TPHAOED/-D": "needed",
     "TPHAOED/*D": "needy",
     "RAOED": "reed",
+    "RAOED/PHAOE": "readme",
     "RAOED/PWHRAOE": "readably",
     "RAOED/-R": "reader",
     "RAOED/-BL": "readable",
@@ -39810,6 +39835,7 @@
     "KH*EUPBTSD": "chintzy",
     "SKPHA*ULTSD": "schmaltzy",
     "SR-Z": "haves",
+    "PHR-Z": "plz",
     "AZ": "as",
     "AZ/PHA/TEUBG": "asthmatic",
     "AZ/PHU": "asthma",
@@ -42182,136 +42208,5 @@
     ]
   },
   "no_pronunciation": [],
-  "no_outlines": [
-    {
-      "word": "betroth",
-      "pronunciation": "B T R AO0 TH",
-      "error": "no syllabification found for word B T R AO0 TH"
-    },
-    {
-      "word": "gpu",
-      "pronunciation": "G P IY2 Y UW1",
-      "error": "no syllabification found for word G P IY2 Y UW1"
-    },
-    {
-      "word": "gyoza",
-      "pronunciation": "G Y OW1 Z AH0",
-      "error": "no syllabification found for word G Y OW1 Z AH0"
-    },
-    {
-      "word": "hehe",
-      "pronunciation": "HH IY1 HH",
-      "error": "no outlines found for word HH IY1 HH"
-    },
-    {
-      "word": "hmpf",
-      "pronunciation": "HH M F",
-      "error": "no syllabification found for word HH M F"
-    },
-    {
-      "word": "jpeg",
-      "pronunciation": "JH P EH2 G",
-      "error": "no syllabification found for word JH P EH2 G"
-    },
-    {
-      "word": "json",
-      "pronunciation": "JH S AH0 N",
-      "error": "no syllabification found for word JH S AH0 N"
-    },
-    {
-      "word": "kpop",
-      "pronunciation": "K P AA2 P",
-      "error": "no syllabification found for word K P AA2 P"
-    },
-    {
-      "word": "lmao",
-      "pronunciation": "L M AW1",
-      "error": "no syllabification found for word L M AW1"
-    },
-    {
-      "word": "mm",
-      "pronunciation": "M",
-      "error": "no syllabification found for word M"
-    },
-    {
-      "word": "pls",
-      "pronunciation": "P L Z",
-      "error": "no syllabification found for word P L Z"
-    },
-    {
-      "word": "plz",
-      "pronunciation": "P L Z",
-      "error": "no syllabification found for word P L Z"
-    },
-    {
-      "word": "pterodactyl",
-      "pronunciation": "P T ER0 OW0 D AE1 K T AH0 L",
-      "error": "no syllabification found for word P T ER0 OW0 D AE1 K T AH0 L"
-    },
-    {
-      "word": "qt",
-      "pronunciation": "K T",
-      "error": "no syllabification found for word K T"
-    },
-    {
-      "word": "readme",
-      "pronunciation": "R IY2 AH0 D M",
-      "error": "no outlines found for word R IY2 AH0 D M"
-    },
-    {
-      "word": "shh",
-      "pronunciation": "SH",
-      "error": "no syllabification found for word SH"
-    },
-    {
-      "word": "skedaddle",
-      "pronunciation": "S K D AE1 D AH0 L",
-      "error": "no syllabification found for word S K D AE1 D AH0 L"
-    },
-    {
-      "word": "sriracha",
-      "pronunciation": "S R IY1 R AA2 K AH0",
-      "error": "no syllabification found for word S R IY1 R AA2 K AH0"
-    },
-    {
-      "word": "stderr",
-      "pronunciation": "S T D EH1 R",
-      "error": "no syllabification found for word S T D EH1 R"
-    },
-    {
-      "word": "stdin",
-      "pronunciation": "S T D IH2 N",
-      "error": "no syllabification found for word S T D IH2 N"
-    },
-    {
-      "word": "stdout",
-      "pronunciation": "S T D AW2 T",
-      "error": "no syllabification found for word S T D AW2 T"
-    },
-    {
-      "word": "technetium",
-      "pronunciation": "T EH2 K N T IY0 AH0 M",
-      "error": "no outlines found for word T EH2 K N T IY0 AH0 M"
-    },
-    {
-      "word": "tsk",
-      "pronunciation": "T S K",
-      "error": "no syllabification found for word T S K"
-    },
-    {
-      "word": "vlog",
-      "pronunciation": "V L AA1 G",
-      "error": "no syllabification found for word V L AA1 G"
-    },
-    {
-      "word": "whitened",
-      "pronunciation": "W AY1 T N D",
-      "error": "no outlines found for word W AY1 T N D"
-    },
-    {
-      "word": "bust",
-      "pronunciation": "B AH1 S T",
-      "error": "forced out by DictionaryEntry { word: \"buss\", pronunciation: B AH1 S }"
-    }
-  ]
+  "no_outlines": []
 }

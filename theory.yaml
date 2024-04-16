@@ -418,7 +418,7 @@ phonology:
     - first: ["K"]
       second: ["V"]
     # Allow voicless fricative, 'z', or 'v' plus approximant other than 'j'.
-    - first: ["F", "S", "Z", "SH"]
+    - first: ["F", "S", "Z", "SH", "V"]
       second: ["L"]
     - first: ["F", "TH", "SH", "V"]
       second: ["R"]
