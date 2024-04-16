@@ -234,6 +234,9 @@ theory:
     "K AH M":
       - position: ["Initial"]
         chords: ["K"]
+    "K AH":
+      - position: ["Initial"]
+        chords: ["K"]
     "D IH S":
       - take_next: "T"
         chords: ["STK"]
@@ -261,6 +264,15 @@ theory:
     "SH AH S":
       - stress: ["None"]
         chords: ["-RBS", "*RBS"]
+    "SH AH L":
+      - stress: ["None"]
+        chords: ["-RBL"]
+    "SH AH L Z":
+      - stress: ["None"]
+        chords: ["-RBLZ"]
+    "SH AH L D":
+      - stress: ["None"]
+        chords: ["-RBLD"]
     "S AH Z":
       - stress: ["None"]
         position: ["Final"]
