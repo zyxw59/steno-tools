@@ -80,7 +80,7 @@ theory:
     "CH": ["KH"]
     "D": ["TK"]
     "DH": ["TH"]
-    "F": ["TP"]
+    "F": ["TP", "W"]
     "G": ["TKPW"]
     "HH": ["H"]
     "JH": ["SKWR"]
@@ -223,6 +223,15 @@ theory:
       - take_next: "T"
         position: ["Initial"]
         chords: ["TK"]
+      - position: ["Initial"]
+        chords: ["K"]
+    "K AA M":
+      - position: ["Initial"]
+        chords: ["K"]
+    "K AO M":
+      - position: ["Initial"]
+        chords: ["K"]
+    "K AH M":
       - position: ["Initial"]
         chords: ["K"]
     "D IH S":
