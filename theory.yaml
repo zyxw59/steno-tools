@@ -227,6 +227,7 @@ theory:
         chords: ["K"]
     "K AH N":
       - take_next: "T"
+        stress: ["None"]
         position: ["Initial"]
         chords: ["TK"]
       - position: ["Initial"]
@@ -239,9 +240,11 @@ theory:
         chords: ["K"]
     "K AH M":
       - position: ["Initial"]
+        stress: ["None"]
         chords: ["K"]
     "K AH":
       - position: ["Initial"]
+        stress: ["None"]
         chords: ["K"]
     "D IH S":
       - take_next: "T"
@@ -263,24 +266,9 @@ theory:
     "SH AH N":
       - stress: ["None"]
         chords: ["-GS", "*GS"]
-    "K SH AH N Z":
-      - stress: ["None"]
-        chords: ["-BGSZ", "*BGSZ"]
-    "SH AH N Z":
-      - stress: ["None"]
-        chords: ["-GSZ", "*GSZ"]
     "SH AH S":
       - stress: ["None"]
         chords: ["-RBS", "*RBS"]
-    "SH AH L":
-      - stress: ["None"]
-        chords: ["-RBL"]
-    "SH AH L Z":
-      - stress: ["None"]
-        chords: ["-RBLZ"]
-    "SH AH L D":
-      - stress: ["None"]
-        chords: ["-RBLD"]
     "S AH Z":
       - stress: ["None"]
         position: ["Final"]
@@ -303,10 +291,6 @@ theory:
       - stress: ["None"]
         position: ["Final"]
         chords: ["-R", "*R"]
-    "ER Z":
-      - stress: ["None"]
-        position: ["Final"]
-        chords: ["-RZ", "*RZ"]
     "IH NG":
       - stress: ["None", "Secondary"]
         position: ["Final"]
@@ -351,6 +335,22 @@ theory:
         position: ["Final"]
         chords: ["*DZ"]
     "IH D":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-D"]
+    "F AH L":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-FL"]
+    "AH L":
+      - stress: ["None"]
+        position: ["Final", "Medial"]
+        chords: ["-L"]
+    "Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-Z"]
+    "D":
       - stress: ["None"]
         position: ["Final"]
         chords: ["-D"]
@@ -518,18 +518,6 @@ phonology:
       coda: "N"
       stress: ["None"]
       position: ["Medial", "Final"]
-    # "K SH AH N Z" /kʃənz/ "-ctionz"
-    - onset: "K SH"
-      vowel: "AH"
-      coda: "N Z"
-      stress: ["None"]
-      position: ["Medial", "Final"]
-    # "SH AH N Z" /ʃənz/ "-tions", "-sions"
-    - onset: "SH"
-      vowel: "AH"
-      coda: "N Z"
-      stress: ["None"]
-      position: ["Medial", "Final"]
     # "IH T IY" /itij/ "-ity"
     - onset: ""
       vowel: "IH"
@@ -542,18 +530,18 @@ phonology:
       coda: "T IY"
       stress: ["None"]
       position: ["Final"]
-    # "IH T IY" /itijz/ "-ities"
-    - onset: ""
-      vowel: "IH"
-      coda: "T IY Z"
+    # "F AH L" /fəl/ "-ful"
+    - onset: "F"
+      vowel: "AH"
+      coda: "L"
       stress: ["None"]
       position: ["Final"]
-    # "AH T IY Z" /ətijz/ "-ities"
+    # "AH L" /əl/ "-le", "-al"
     - onset: ""
       vowel: "AH"
-      coda: "T IY Z"
+      coda: "L"
       stress: ["None"]
-      position: ["Final"]
+      position: ["Medial", "Final"]
     # "AH" /ə/ (medial schwa)
     - onset: ""
       vowel: "AH"
@@ -564,12 +552,6 @@ phonology:
     - onset: ""
       vowel: "ER"
       coda: ""
-      stress: ["None"]
-      position: ["Final"]
-    # "ER Z" /ərz/ "-ers", "-ors"
-    - onset: ""
-      vowel: "ER"
-      coda: "Z"
       stress: ["None"]
       position: ["Final"]
     # "IH NG" /iŋ/ "-ing"

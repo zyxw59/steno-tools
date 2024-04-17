@@ -3540,7 +3540,6 @@ bollocks
 bolo
 bologna
 bolognese
-boloney
 bolster
 bolstered
 bolstering
@@ -5608,6 +5607,7 @@ circumvent
 circumvention
 circus
 cirrus
+cis
 cistern
 citable
 citadel
@@ -6464,7 +6464,6 @@ complying
 component
 components
 comport
-compos
 compose
 composed
 composer
@@ -10197,6 +10196,7 @@ downwind
 dowry
 dowse
 dox
+doxx
 doze
 dozen
 dozens
@@ -16717,6 +16717,7 @@ hysterical
 hysterically
 hysterics
 I
+I'll
 iamb
 iambic
 ibex
@@ -20677,6 +20678,7 @@ marvelous
 marvelously
 marzipan
 masa
+masc
 mascara
 mascarpone
 mascot
@@ -21270,7 +21272,6 @@ mildew
 mildness
 mile
 mileage
-milennial
 miler
 miles
 milestone
@@ -35237,7 +35238,6 @@ tingly
 tinier
 tiniest
 tininess
-tinitus
 tinker
 tinkered
 tinkering
@@ -36245,7 +36245,6 @@ twosome
 tycoon
 tying
 tyke
-tympani
 tympanic
 tympanum
 type
