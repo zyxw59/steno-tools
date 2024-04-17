@@ -167,26 +167,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dict-compare"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bitflags",
- "clap",
- "enumset",
- "indexmap",
- "itertools",
- "regex",
- "serde",
- "serde_json",
- "serde_yaml",
- "slab",
- "smol_str",
- "test-case",
- "thiserror",
-]
-
-[[package]]
 name = "either"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -389,6 +369,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6845563ada680337a52d43bb0b29f396f2d911616f6573012645b9e3d048a49"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "steno-tools"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitflags",
+ "clap",
+ "enumset",
+ "indexmap",
+ "itertools",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "slab",
+ "smol_str",
+ "test-case",
+ "thiserror",
 ]
 
 [[package]]
