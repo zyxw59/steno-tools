@@ -204,8 +204,8 @@ impl PhoneticTheory {
         };
         let (chords, skip) = self.theory.get_suffix(syllable, prev_skip);
         for &ch in chords {
-            if let Some(st) = st {
-                if (st & ch).is_empty() && st.before_ignore_star(ch) {
+            match st {
+                Some(st) if (st & ch).is_empty() && st.before_ignore_star(ch) => {
                     next_outlines.push(OutlinePiece {
                         stroke: st | ch,
                         linker,
@@ -213,8 +213,10 @@ impl PhoneticTheory {
                         kind: OutlinePieceKind::Suffix,
                         skip,
                     });
-                } else {
-                    // if the suffix would conflict, push it as a standalone
+                }
+                _ => {
+                    // if the suffix would conflict, or there's no preceding syllable, push it as a
+                    // standalone
                     next_outlines.push(OutlinePiece {
                         stroke: ch | prev_linker, // TODO what if the linker would conflict
                         linker,
@@ -289,10 +291,7 @@ impl PhoneticTheory {
 }
 
 fn outline_tree_iter(outlines: &Tree<OutlinePiece>) -> impl Iterator<Item = Outline> + '_ {
-    outlines
-            .as_ref()
-            .paths()
-            .with_collect_copied()
+    outlines.as_ref().paths().with_collect_copied()
 }
 
 fn disambiguate_iters<T, U, I1, I2>(initial: T, left: I1, right: I2) -> Option<(T, T)>
@@ -1089,7 +1088,7 @@ mod tests {
     #[test_case("AE1 K SH AH0 N", "ABGS" ; "action")]
     #[test_case("G AH1 M P SH AH0 N", "TKPWUFRPGS" ; "gumption")]
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
-    #[test_case("W IH DH D R AO1 AH0 L", "W*EUT/TKRO/WUL" ; "withdrawal")]
+    #[test_case("W IH DH D R AO1 AH0 L", "W*EUT/TKROL" ; "withdrawal")]
     #[test_case("S T EY1 SH AH0 N EH2 R IY0", "STAEUGS/A*EURD" ; "stationary")]
     fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
         let expected_outline = expected_outline.parse::<Outline>()?;
