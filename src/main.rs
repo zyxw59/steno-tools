@@ -149,6 +149,8 @@ struct GenerateOutlines {
     wordlist: PathBuf,
     #[clap(short, long = "pronunciations", required = true)]
     pronunciation_file: Vec<PathBuf>,
+    #[clap(short, long)]
+    delete_pronunciations: Option<PathBuf>,
     #[clap(short, long = "theory")]
     theory_file: PathBuf,
     #[clap(short = 'O', long = "overrides")]
@@ -168,6 +170,10 @@ impl GenerateOutlines {
                 Ok(acc)
             },
         )?;
+        if let Some(filename) = &self.delete_pronunciations {
+            let delete_pronunciations = pronounce::Dictionary::load(BufReader::new(File::open(filename)?))?;
+            pronunciation_dict.subtract(&delete_pronunciations);
+        }
         let theory: theory::PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open(&self.theory_file)?))?;
         let mut generated_dict = GeneratedDictionary::default();
