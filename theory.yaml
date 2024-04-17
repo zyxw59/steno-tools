@@ -13,10 +13,13 @@ theory:
       - chords: ["O"]
     "AE":
       - next_broad: "R"
-        chords: ["E"]
+        chords: ["AEU"]
       - chords: ["A"]
     "IH": ["EU"]
-    "EH": ["E"]
+    "EH":
+      - next_broad: ["R"]
+        chords: ["AEU"]
+      - chords: ["E"]
     "ER":
       - next: "CH"
         chords: ["U"]
@@ -26,16 +29,15 @@ theory:
         chords: ["U"]
       - next: "V"
         chords: ["U"]
+      - next: "R"
+        chords: ["U"]
       - chords: ["UR"]
     "UH":
       - next_broad: "L"
         chords: ["U"]
       - chords: ["AO"]
     "IY": ["AOE"]
-    "EY":
-      - next_broad: "R"
-        chords: ["E"]
-      - chords: ["AEU"]
+    "EY": ["AEU"]
     "AY": ["AOEU"]
     "OY": ["OEU"]
     "AW": ["OU"]
@@ -71,13 +73,14 @@ theory:
     "UW": "W"
     "AA": "W"
     "AO": "W"
+    "ER": "R"
 
   onsets:
     "B": ["PW"]
     "CH": ["KH"]
     "D": ["TK"]
     "DH": ["TH"]
-    "F": ["TP"]
+    "F": ["TP", "W"]
     "G": ["TKPW"]
     "HH": ["H"]
     "JH": ["SKWR"]
@@ -91,11 +94,16 @@ theory:
     "SH": ["SH"]
     "T": ["T"]
     "TH": ["TH"]
-    "V": ["SPW", "W"]
+    "V": ["SR", "W"]
     "W": ["W"]
     "Y": ["KWR"]
     "Z": ["STK", "S*"]
     "ZH": ["SKH"]
+    "SH R": ["SHR", "SHR*"]
+    "SH L": ["SKHR"]
+    "SH M": ["SKPH"]
+    "SH N": ["STKPH"]
+    "SH T": ["STH"]
     "SH W": ["SWH"]
     "TH W": ["TWH"]
     "HH W": ["WH"]
@@ -150,6 +158,7 @@ theory:
     "TH": ["*T"]
     "R SH": ["*RB"]
     "R CH": ["-FRPB"]
+    "R B": ["-RB", "*RB"]
     "N CH": ["-FRPB"]
     "N JH": ["-FPBG"]
     "L CH": ["-LG"]
@@ -167,7 +176,7 @@ theory:
     "D TH": ["*TD"]
     "NG": ["-PBG"]
     "N K": ["-PBG"]
-    "NG K": ["-PBG"]
+    "NG K": ["-PBG", "*PBG"]
     "NG G": ["-PBG"]
     "L M": ["-PBL"]
     "L P": ["-P", "-PL"]
@@ -178,34 +187,74 @@ theory:
     "IH K S":
       - take_next: "P"
         stress: ["None"]
-        chords: ["KP"]
         position: ["Initial"]
+        chords: ["KP"]
       - take_next: "K"
         stress: ["None"]
-        chords: ["KP"]
         position: ["Initial"]
+        chords: ["KP"]
       - take_next: "T"
         stress: ["None"]
-        chords: ["KP"]
         position: ["Initial"]
+        chords: ["KP"]
       - take_next: "CH"
         stress: ["None"]
+        position: ["Initial"]
         chords: ["KPH"]
-        position: ["Initial"]
       - stress: ["None"]
+        position: ["Initial"]
         chords: ["KP"]
-        position: ["Initial"]
+    "IH N T":
+      - position: ["Initial"]
+        chords: ["SPW"]
+    "IH M P":
+      - position: ["Initial"]
+        chords: ["KPW"]
+    "IH M B":
+      - position: ["Initial"]
+        chords: ["KPW"]
     "K AA N":
-      - chords: ["K"]
+      - take_next: "T"
         position: ["Initial"]
+        chords: ["TK"]
+      - position: ["Initial"]
+        chords: ["K"]
     "K AO N":
-      - chords: ["K"]
+      - take_next: "T"
         position: ["Initial"]
+        chords: ["TK"]
+      - position: ["Initial"]
+        chords: ["K"]
+    "K AH N":
+      - take_next: "T"
+        stress: ["None"]
+        position: ["Initial"]
+        chords: ["TK"]
+      - position: ["Initial"]
+        chords: ["K"]
+    "K AA M":
+      - position: ["Initial"]
+        chords: ["K"]
+    "K AO M":
+      - position: ["Initial"]
+        chords: ["K"]
+    "K AH M":
+      - position: ["Initial"]
+        stress: ["None"]
+        chords: ["K"]
+    "K AH":
+      - position: ["Initial"]
+        stress: ["None"]
+        chords: ["K"]
     "D IH S":
       - take_next: "T"
         chords: ["STK"]
       - take_next: "K"
         chords: ["STK"]
+      - take_next: "G"
+        chords: ["STKPW"]
+      - chords: ["STK"]
+    "D IH Z":
       - chords: ["STK"]
     "D IH":
       - stress: ["None"]
@@ -231,6 +280,9 @@ theory:
     "AH B AH L":
       - stress: ["None"]
         chords: ["-BL"]
+    "AH B IH L":
+      - position: ["Medial"]
+        chords: ["-BL"]
     "AH":
       - stress: ["None"]
         position: ["Medial"]
@@ -239,14 +291,69 @@ theory:
       - stress: ["None"]
         position: ["Final"]
         chords: ["-R", "*R"]
-    "ER Z":
-      - stress: ["None"]
-        position: ["Final"]
-        chords: ["-RZ", "*RZ"]
     "IH NG":
       - stress: ["None", "Secondary"]
         position: ["Final"]
         chords: ["-G"]
+    "CH W AH S":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["TAOUS"]
+    "CH W AH":
+      - stress: ["None"]
+        position: ["Medial"]
+        chords: ["TAOU"]
+    "L AH T":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-LT"]
+    "IH T IY":
+      - position: ["Final"]
+        chords: ["*TD"]
+    "AH T IY":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["*TD"]
+    "IH T IY Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["*TSDZ"]
+    "AH T IY Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["*TSDZ"]
+    "L IY":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["*L"]
+    "IY":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["*D"]
+    "IY Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["*DZ"]
+    "IH D":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-D"]
+    "F AH L":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-FL"]
+    "AH L":
+      - stress: ["None"]
+        position: ["Final", "Medial"]
+        chords: ["-L"]
+    "Z":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-Z"]
+    "D":
+      - stress: ["None"]
+        position: ["Final"]
+        chords: ["-D"]
 
   spelling_conflicts:
     - chord: "AEU"
@@ -263,18 +370,44 @@ theory:
           replace: "AE"
     - chord: "S"
       rules:
-        - pattern: "sc"
+        - pattern: "sc[eiy]"
           replace: "SK"
-        - pattern: "c"
-          replace: "SR"
+        - pattern: "c[eiy]"
+          replace: "KR"
         - pattern: "s"
           replace: "S"
+    - chord: "K"
+      rules:
+        - pattern: "ch"
+          replace: "KH"
+        - pattern: "[ck]"
+          replace: "K"
+    - chord: "R"
+      rules:
+        - pattern: "wr"
+          replace: "WR"
+        - pattern: "r"
+          replace: "R"
+    - chord: "AO"
+      rules:
+        - pattern: "ew"
+          replace: "AOU"
+        - pattern: "ue"
+          replace: "AO"
     - chord: "OE"
       rules:
         - pattern: "oa"
           replace: "AO"
         - pattern: "o.[aeiouy]"
           replace: "OE"
+    - chord: "OL"
+      rules:
+        - pattern: "oll"
+          replace: "OL"
+        - pattern: "o[uw]l"
+          replace: "OUL"
+        - pattern: "ol[aeiouy]"
+          replace: "OEL"
     - chord: "O"
       rules:
         - pattern: "[ao]u"
@@ -283,6 +416,24 @@ theory:
           replace: "AU"
         - pattern: "o"
           replace: "O"
+    - chord: "PHUPB"
+      rules:
+        - pattern: "man"
+          replace: "PHAPB"
+        - pattern: "men"
+          replace: "PHEPB"
+    - chord: "-BG"
+      rules:
+        - pattern: "ck"
+          replace: "-BG"
+        - pattern: "c$"
+          replace: "*BG"
+    - chord: "-T"
+      rules:
+        - pattern: "ed$"
+          replace: "-D"
+        - pattern: "t$"
+          replace: "-FT"
 
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
@@ -296,7 +447,7 @@ phonology:
     - first: ["K"]
       second: ["V"]
     # Allow voicless fricative, 'z', or 'v' plus approximant other than 'j'.
-    - first: ["F", "S", "Z"]
+    - first: ["F", "S", "Z", "SH", "V"]
       second: ["L"]
     - first: ["F", "TH", "SH", "V"]
       second: ["R"]
@@ -304,7 +455,9 @@ phonology:
       second: ["W"]
     # Allow 's' plus voicless stop, nasal, or voicless fricative
     - first: ["S"]
-      second: ["P", "T", "K", "M", "N", "F", "TH"]
+      second: ["P", "T", "K", "M", "N", "F", "TH", "V"]
+    - first: ["SH"]
+      second: ["T", "M", "N"]
     # Allow 'nj' clusters :3
     - first: ["N"]
       second: ["Y"]
@@ -314,44 +467,132 @@ phonology:
     - first: ["Y"]
       second: ["UW", "UH", "AH"]
   multi_syllables:
+    # "IH K S" /iks/ "ex-"
     - onset: ""
       vowel: "IH"
       coda: "K S"
       stress: ["None"]
       position: ["Initial"]
+    # "IH N T" /int/ "int-"
+    - onset: ""
+      vowel: "IH"
+      coda: "N T"
+      position: ["Initial"]
+    # "IH M P" /imp/ "imp-", "emp-"
+    - onset: ""
+      vowel: "IH"
+      coda: "M P"
+      position: ["Initial"]
+    # "IH M B" /imb/ "imb-", "emb-"
+    - onset: ""
+      vowel: "IH"
+      coda: "M B"
+      position: ["Initial"]
+    # "D IH S" /dis/ "dis-", "des-"
     - onset: "D"
       vowel: "IH"
       coda: "S"
+    # "D IH Z" /diz/ "dis-", "des-"
+    - onset: "D"
+      vowel: "IH"
+      coda: "Z"
+    # "AH B AH L" /əbəl/ "-able", "-ible"
     - onset: ""
       vowel: "AH"
       coda: "B AH L"
       stress: ["None"]
-    - onset: ""
-      vowel: "AH"
-      coda: ""
-      stress: ["None"]
-      position: ["Medial"]
+    # "AH B IH L" /əbil/ "-abil-", "-ibil-"
+    - onset: "AH B"
+      vowel: "IH"
+      coda: "L"
+      stress: ["Primary", "Secondary"]
+    # "K SH AH N" /kʃən/ "-ction"
     - onset: "K SH"
       vowel: "AH"
       coda: "N"
       stress: ["None"]
+      position: ["Medial", "Final"]
+    # "SH AH N" /ʃən/ "-tion", "-sion"
     - onset: "SH"
       vowel: "AH"
       coda: "N"
       stress: ["None"]
       position: ["Medial", "Final"]
+    # "IH T IY" /itij/ "-ity"
+    - onset: ""
+      vowel: "IH"
+      coda: "T IY"
+      stress: ["None"]
+      position: ["Final"]
+    # "AH T IY" /ətij/ "-ity"
+    - onset: ""
+      vowel: "AH"
+      coda: "T IY"
+      stress: ["None"]
+      position: ["Final"]
+    # "F AH L" /fəl/ "-ful"
+    - onset: "F"
+      vowel: "AH"
+      coda: "L"
+      stress: ["None"]
+      position: ["Final"]
+    # "AH L" /əl/ "-le", "-al"
+    - onset: ""
+      vowel: "AH"
+      coda: "L"
+      stress: ["None"]
+      position: ["Medial", "Final"]
+    # "AH" /ə/ (medial schwa)
+    - onset: ""
+      vowel: "AH"
+      coda: ""
+      stress: ["None"]
+      position: ["Medial"]
+    # "ER" /ər/ "-er", "-or"
     - onset: ""
       vowel: "ER"
       coda: ""
       stress: ["None"]
       position: ["Final"]
-    - onset: ""
-      vowel: "ER"
-      coda: "Z"
-      stress: ["None"]
-      position: ["Final"]
+    # "IH NG" /iŋ/ "-ing"
     - onset: ""
       vowel: "IH"
       coda: "NG"
       stress: ["None", "Secondary"]
+      position: ["Final"]
+    # "CH W AH S" /tʃwəs/ "-tuous"
+    - onset: "CH W"
+      vowel: "AH"
+      coda: "S"
+      stress: ["None"]
+      position: ["Final"]
+    # "CH W AH" /tʃwə/ "-tua-"
+    - onset: "CH W"
+      vowel: "AH"
+      coda: ""
+      stress: ["None"]
+      position: ["Medial"]
+    # "L IY" /lij/ "-ly"
+    - onset: "L"
+      vowel: "IY"
+      coda: ""
+      stress: ["None"]
+      position: ["Final"]
+    # "IY" /ij/ "-y", "-ie"
+    - onset: ""
+      vowel: "IY"
+      coda: ""
+      stress: ["None"]
+      position: ["Final"]
+    # "IY Z" /ijz/ "-ies"
+    - onset: ""
+      vowel: "IY"
+      coda: "Z"
+      stress: ["None"]
+      position: ["Final"]
+    # "IH D" /id/ "-ed"
+    - onset: ""
+      vowel: "IH"
+      coda: "D"
+      stress: ["None"]
       position: ["Final"]

@@ -1,8 +1,13 @@
 use std::collections::{btree_map::Entry, BTreeMap, BTreeSet};
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 
-use crate::{chord::Outline, dictionary::Word, pronounce::{DictionaryEntry, Pronunciation}};
+use crate::{
+    chord::Outline,
+    dictionary::Word,
+    pronounce::{DictionaryEntry, Pronunciation},
+};
 
 #[derive(Default, Debug, Serialize)]
 pub struct GeneratedDictionary {
@@ -13,7 +18,8 @@ pub struct GeneratedDictionary {
 }
 
 impl GeneratedDictionary {
-    pub fn insert(&mut self, outline: Outline, word: Word, pronunciation: Pronunciation) {
+    /// Returns whether the outline was successfully inserted without any conflicts.
+    pub fn insert(&mut self, outline: Outline, word: Word, pronunciation: Pronunciation) -> bool {
         let new_entry = DictionaryEntry {
             word,
             pronunciation,
@@ -21,13 +27,88 @@ impl GeneratedDictionary {
         match self.conflicts.entry(outline.clone()) {
             Entry::Occupied(mut conflicts_entry) => {
                 conflicts_entry.get_mut().insert(new_entry);
+                false
             }
             Entry::Vacant(conflicts_entry) => {
                 if let Some(old_entry) = self.valid_outlines.insert(outline, new_entry.clone()) {
                     conflicts_entry.insert([old_entry, new_entry].into_iter().collect());
+                    false
+                } else {
+                    true
                 }
             }
         }
+    }
+
+    /// Inserts the word, ignoring conflicts.
+    ///
+    /// If the outline is already used by other entries, those entries will be put in the "no
+    /// outlines" section.
+    ///
+    /// Returns whether the outline was inserted without any conflicts.
+    pub fn insert_force(
+        &mut self,
+        outline: Outline,
+        word: Word,
+        pronunciation: Pronunciation,
+    ) -> bool {
+        let new_entry = DictionaryEntry {
+            word,
+            pronunciation,
+        };
+        let mut success = true;
+        if let Entry::Occupied(conflicts_entry) = self.conflicts.entry(outline.clone()) {
+            let conflicts = conflicts_entry.remove();
+            self.no_outlines
+                .extend(conflicts.into_iter().map(|entry| NoOutline {
+                    word: entry.word,
+                    pronunciation: entry.pronunciation,
+                    error: anyhow::anyhow!("forced out by {new_entry:?}"),
+                }));
+            success = false;
+        }
+        if let Some(old_entry) = self.valid_outlines.insert_force(outline, new_entry.clone()) {
+            self.no_outlines.push(NoOutline {
+                word: old_entry.word,
+                pronunciation: old_entry.pronunciation,
+                error: anyhow::anyhow!("forced out by {new_entry:?}"),
+            });
+            success = false;
+        }
+        success
+    }
+
+    pub fn remove_conflicts_with_valid_alternatives(&mut self) {
+        let mut removals = BTreeSet::new();
+        for (outline, conflicts) in &mut self.conflicts {
+            conflicts.retain(|entry| !self.valid_outlines.words.contains_key(&entry.word));
+            if conflicts.len() <= 1 {
+                if let Some(entry) = conflicts.pop_first() {
+                    self.valid_outlines.insert(outline.clone(), entry);
+                }
+                removals.insert(outline.clone());
+            }
+        }
+        self.conflicts
+            .retain(|outline, _| !removals.contains(outline));
+    }
+
+    pub fn resolve_identical_conflicts(&mut self) {
+        let mut removals = BTreeSet::new();
+        for (outline, conflicts) in &mut self.conflicts {
+            if conflicts.iter().map(|entry| &entry.word).all_equal() {
+                self.valid_outlines
+                    .insert(outline.clone(), conflicts.pop_first().unwrap());
+                removals.insert(outline.clone());
+            }
+        }
+        self.conflicts
+            .retain(|outline, _| !removals.contains(outline));
+    }
+
+    pub fn remove_errors_with_valid_alternatives(&mut self) {
+        self.no_outlines
+            .retain(|entry| !self.valid_outlines.words.contains_key(&entry.word))
     }
 
     pub fn resolve_pairs(
@@ -55,9 +136,8 @@ impl GeneratedDictionary {
                 insertions.insert(outline_2, entry_2.clone());
             }
         }
-        for outline in removals {
-            self.conflicts.remove(&outline);
-        }
+        self.conflicts
+            .retain(|outline, _| !removals.contains(outline));
         for (outline, entry) in insertions {
             self.insert(outline, entry.word, entry.pronunciation);
         }
@@ -78,17 +158,48 @@ impl Dictionary {
     ) -> Option<DictionaryEntry> {
         match self.outlines.entry(outline.clone()) {
             Entry::Occupied(old_entry) if old_entry.get().word != new_entry.word => {
-                if let Some(outlines) = self.words.get_mut(&new_entry.word) {
+                let old_word = &old_entry.get().word;
+                if let Some(outlines) = self.words.get_mut(old_word) {
                     outlines.remove(&outline);
+                    if outlines.is_empty() {
+                        self.words.remove(old_word);
+                    }
                 }
                 return Some(old_entry.remove());
             }
             Entry::Occupied(_) => {}
             Entry::Vacant(vacant) => {
+                self.words
+                    .entry(new_entry.word.clone())
+                    .or_default()
+                    .insert(outline);
                 vacant.insert(new_entry);
             }
         }
         None
+    }
+
+    pub fn insert_force(
+        &mut self,
+        outline: Outline,
+        new_entry: DictionaryEntry,
+    ) -> Option<DictionaryEntry> {
+        let old_entry = self.outlines.insert(outline.clone(), new_entry.clone());
+        if let Some(old_entry) = &old_entry {
+            if old_entry.word != new_entry.word {
+                if let Some(outlines) = self.words.get_mut(&old_entry.word) {
+                    outlines.remove(&outline);
+                    if outlines.is_empty() {
+                        self.words.remove(&old_entry.word);
+                    }
+                }
+            }
+        }
+        self.words
+            .entry(new_entry.word.clone())
+            .or_default()
+            .insert(outline);
+        old_entry
     }
 }
 
@@ -130,4 +241,11 @@ where
     D: serde::Deserializer<'de>,
 {
     String::deserialize(de).map(anyhow::Error::msg)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Override {
+    pub word: Word,
+    pub pronunciation: Pronunciation,
+    pub outline: Outline,
 }

@@ -24,10 +24,7 @@ pub struct PhoneticTheory {
 
 impl PhoneticTheory {
     pub fn get_outline(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Outline> {
-        self.get_outline_tree(pronunciation)?
-            .as_ref()
-            .paths()
-            .with_collect_copied()
+        outline_tree_iter(&self.get_outline_tree(pronunciation)?)
             .next()
             .ok_or_else(|| {
                 anyhow::anyhow!(
@@ -42,10 +39,7 @@ impl PhoneticTheory {
         first: &[Phoneme],
         second: &[Phoneme],
     ) -> anyhow::Result<Outline> {
-        self.get_outline_tree_compound(first, second)?
-            .as_ref()
-            .paths()
-            .with_collect_copied()
+        outline_tree_iter(&self.get_outline_tree_compound(first, second)?)
             .next()
             .ok_or_else(|| {
                 anyhow::anyhow!(
@@ -56,8 +50,14 @@ impl PhoneticTheory {
             })
     }
 
+    pub fn get_outlines_vec(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Vec<Outline>> {
+        Ok(outline_tree_iter(&self.get_outline_tree(pronunciation)?).collect())
+    }
+
     fn get_outline_tree(&self, pronunciation: &[Phoneme]) -> anyhow::Result<Tree<OutlinePiece>> {
         let syllables = self.phonology.syllable_tree(pronunciation);
+        #[cfg(test)]
+        eprintln!("syllables: {syllables:#?}");
         if syllables.is_empty() {
             return Err(anyhow::anyhow!(
                 "no syllabification found for word {}",
@@ -134,7 +134,7 @@ impl PhoneticTheory {
         disambiguate_iters(outline, outlines_1, outlines_2)
     }
 
-    fn spelling_options(&self, outline: Outline, spelling: &str) -> Vec<Outline> {
+    pub fn spelling_options(&self, outline: Outline, spelling: &str) -> Vec<Outline> {
         let mut possible_outlines = vec![outline];
         let mut next_outlines = Vec::new();
         for conflict_rule in &self.theory.spelling_conflicts {
@@ -286,6 +286,13 @@ impl PhoneticTheory {
         }
         possible_outlines
     }
+}
+
+fn outline_tree_iter(outlines: &Tree<OutlinePiece>) -> impl Iterator<Item = Outline> + '_ {
+    outlines
+            .as_ref()
+            .paths()
+            .with_collect_copied()
 }
 
 fn disambiguate_iters<T, U, I1, I2>(initial: T, left: I1, right: I2) -> Option<(T, T)>
@@ -1075,7 +1082,7 @@ mod tests {
     #[test_case("AO1 L", "AUL" ; "all")]
     #[test_case("Y AH1 NG", "KWRUPBG" ; "young")]
     #[test_case("EH1 M Y AH0 L EY2 T", "E/PHAOU/HRAEUT" ; "emulate")]
-    #[test_case("M AE1 R IY0", "PHE/RAOE" ; "marry")]
+    #[test_case("M AE1 R IY0", "PHA*EURD" ; "marry")]
     #[test_case("IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
     #[test_case("IH0 K S CH EY2 N JH", "KPHAEUFPBG" ; "exchange")]
     #[test_case("D IH1 S T AH0 N T", "STKUPBT" ; "distant")]
@@ -1083,6 +1090,7 @@ mod tests {
     #[test_case("G AH1 M P SH AH0 N", "TKPWUFRPGS" ; "gumption")]
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
     #[test_case("W IH DH D R AO1 AH0 L", "W*EUT/TKRO/WUL" ; "withdrawal")]
+    #[test_case("S T EY1 SH AH0 N EH2 R IY0", "STAEUGS/A*EURD" ; "stationary")]
     fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
@@ -1095,7 +1103,7 @@ mod tests {
                 format!("{}", piece.stroke)
             }
         });
-        eprintln!("outlines: {outline_tree:?}");
+        eprintln!("outlines: {outline_tree:#?}");
         let actual_outline = outlines
             .as_ref()
             .paths()
