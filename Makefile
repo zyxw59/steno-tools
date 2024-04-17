@@ -9,6 +9,8 @@ wordlist = sources/wordlist.txt
 theory = theory.yaml
 overrides = sources/overrides.yaml
 
+.PHONY: summary
+
 $(generated-dict): $(steno-tools-bin) $(pronunciation-dicts) \
 	$(bad-pronunciations) $(wordlist.txt) $(theory) $(overrides)
 	$(steno-tools-bin) generate-outlines -t $(theory) \
@@ -20,3 +22,6 @@ $(generated-dict): $(steno-tools-bin) $(pronunciation-dicts) \
 
 $(steno-tools-bin): $(rust-sources) Cargo.toml Cargo.lock
 	cargo build --release
+
+summary: $(generated-dict)
+	jq 'map_values(length)' $(generated-dict)
