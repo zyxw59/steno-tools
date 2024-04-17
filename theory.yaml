@@ -287,6 +287,9 @@ theory:
       - stress: ["None"]
         position: ["Medial"]
         chords: ["", "U"]
+      - stress: ["None"]
+        position: ["Initial"]
+        chords: ["A"]
     "ER":
       - stress: ["None"]
         position: ["Final"]

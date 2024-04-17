@@ -1474,8 +1474,9 @@
 - word: "levees"
   pronunciation: "L EH1 V IY0 Z"
   outline: "HRE/SRAOEZ"
-
-# bad pronunciations
+- word: "elide"
+  pronunciation: "AH0 L AY1 D"
+  outline: "AOE/HRAEUD"
 - word: "for"
   pronunciation: "F ER0"
   outline: "TP-R"
