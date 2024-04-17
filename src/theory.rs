@@ -1059,6 +1059,7 @@ mod tests {
     #[test_case("L AH1 V AH0 B AH0 L", &[
         "L AH1 V/AH0 B AH0 L",
         "L AH1 V/AH0/B AH0 L",
+        "L AH1/V AH0 B/AH0 L",
         "L AH1/V AH0/B AH0 L",
     ] ; "loveable")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
