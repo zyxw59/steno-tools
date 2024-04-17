@@ -11,13 +11,13 @@ theory = theory.yaml
 overrides = sources/overrides.yaml
 
 .PHONY: all summary
-all: summary $(plover-dict)
+all: summary $(plover-dict) $(generated-dict)
 
 $(plover-dict): $(generated-dict)
 	jq '.valid_outlines' $(generated-dict) > $@
 
 $(generated-dict): $(steno-tools-bin) $(pronunciation-dicts) \
-	$(bad-pronunciations) $(wordlist.txt) $(theory) $(overrides)
+	$(bad-pronunciations) $(wordlist) $(theory) $(overrides)
 	$(steno-tools-bin) generate-outlines -t $(theory) \
 		$(pronunciation-dicts-flags) \
 		-d $(bad-pronunciations) \
