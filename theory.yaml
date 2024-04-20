@@ -442,7 +442,7 @@ theory:
         - pattern: "ed$"
           replace: "-D"
         - pattern: "t$"
-          replace: "-FT"
+          replace: "-T"
 
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
