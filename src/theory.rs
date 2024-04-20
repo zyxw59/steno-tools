@@ -153,18 +153,19 @@ impl PhoneticTheory {
     fn prefixes_for_syllable(
         &self,
         prev: Option<OutlinePiece>,
-        syllable: Syllable,
+        mut syllable: Syllable,
         next_outlines: &mut Vec<OutlinePiece>,
     ) {
         let linker = self.theory.get_linker(syllable);
         let st = prev.and_then(|op| op.is_prefix().then_some(op.stroke));
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        syllable.skip(prev_skip);
         let prev_linker = if syllable.onset_range().is_empty() {
             prev.map(|piece| piece.linker).unwrap_or_default()
         } else {
             Chord::empty()
         };
-        let (chords, skip) = self.theory.get_prefix(syllable, prev_skip);
+        let (chords, skip) = self.theory.get_prefix(syllable);
         for &ch in chords {
             if let Some(st) = st {
                 if (st & ch).is_empty() && st.before_ignore_star(ch) {
@@ -191,18 +192,19 @@ impl PhoneticTheory {
     fn suffixes_for_syllable(
         &self,
         prev: Option<OutlinePiece>,
-        syllable: Syllable,
+        mut syllable: Syllable,
         next_outlines: &mut Vec<OutlinePiece>,
     ) {
         let linker = self.theory.get_linker(syllable);
         let st = prev.map(|op| op.stroke);
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        syllable.skip(prev_skip);
         let prev_linker = if syllable.onset_range().is_empty() {
             prev.map(|piece| piece.linker).unwrap_or_default()
         } else {
             Chord::empty()
         };
-        let (chords, skip) = self.theory.get_suffix(syllable, prev_skip);
+        let (chords, skip) = self.theory.get_suffix(syllable);
         for &ch in chords {
             match st {
                 Some(st) if (st & ch).is_empty() && st.before_ignore_star(ch) => {
@@ -508,6 +510,24 @@ struct SyllableRule {
     chords: Rc<[Chord]>,
 }
 
+impl RuleIter for Rc<[SyllableRule]> {
+    type Output<'t> = (&'t [Chord], usize);
+
+    fn matches_at<'t>(
+        &'t self,
+        syllable: Syllable,
+        _range: Range<usize>,
+    ) -> Option<Self::Output<'t>> {
+        self.iter()
+            .find(|rule| rule.matches(syllable))
+            .map(SyllableRule::chords_and_skip)
+    }
+
+    fn default_output<'t>() -> Self::Output<'t> {
+        (&[], 0)
+    }
+}
+
 impl SyllableRule {
     fn matches(&self, syllable: Syllable<'_>) -> bool {
         [
@@ -607,52 +627,57 @@ impl TryFrom<RawSpellingConflict> for SpellingConflict {
 }
 
 impl Theory {
-    fn onset_matches<'t, 'w>(&'t self, syllable: Syllable<'w>) -> MatchChordIter<'t, 'w> {
-        MatchChordIter {
+    fn onset_matches<'t, 'w>(
+        &'t self,
+        syllable: Syllable<'w>,
+    ) -> PronunciationMapIter<'t, 'w, OutputRules> {
+        PronunciationMapIter {
             map: &self.onsets,
             range: syllable.onset_range(),
             syllable,
         }
     }
 
-    fn vowel_matches<'t, 'w>(&'t self, syllable: Syllable<'w>) -> MatchChordIter<'t, 'w> {
-        MatchChordIter {
+    fn vowel_matches<'t, 'w>(
+        &'t self,
+        syllable: Syllable<'w>,
+    ) -> PronunciationMapIter<'t, 'w, OutputRules> {
+        PronunciationMapIter {
             map: &self.vowels,
             range: syllable.vowel_range(),
             syllable,
         }
     }
 
-    fn coda_matches<'t, 'w>(&'t self, syllable: Syllable<'w>) -> MatchChordIter<'t, 'w> {
-        MatchChordIter {
+    fn coda_matches<'t, 'w>(
+        &'t self,
+        syllable: Syllable<'w>,
+    ) -> PronunciationMapIter<'t, 'w, OutputRules> {
+        PronunciationMapIter {
             map: &self.codas,
             range: syllable.coda_range(),
             syllable,
         }
     }
 
-    fn get_prefix(&self, syllable: Syllable, skip: usize) -> (&[Chord], usize) {
-        syllable
-            .as_slice()
-            .get(skip..)
-            .and_then(|slice| self.prefixes.map.get(slice))
-            .into_iter()
-            .flat_map(|rules| &**rules)
-            .find(|rule| rule.matches(syllable))
-            .map(SyllableRule::chords_and_skip)
-            .unwrap_or((&[], 0))
+    fn get_prefix(&self, syllable: Syllable) -> (&[Chord], usize) {
+        PronunciationMapIter {
+            map: &self.prefixes,
+            range: syllable.range(),
+            syllable,
+        }
+        .next()
+        .unwrap_or((&[], 0))
     }
 
-    fn get_suffix(&self, syllable: Syllable, skip: usize) -> (&[Chord], usize) {
-        syllable
-            .as_slice()
-            .get(skip..)
-            .and_then(|slice| self.suffixes.map.get(slice))
-            .into_iter()
-            .flat_map(|rules| &**rules)
-            .find(|rule| rule.matches(syllable))
-            .map(SyllableRule::chords_and_skip)
-            .unwrap_or((&[], 0))
+    fn get_suffix(&self, syllable: Syllable) -> (&[Chord], usize) {
+        PronunciationMapIter {
+            map: &self.suffixes,
+            range: syllable.range(),
+            syllable,
+        }
+        .next()
+        .unwrap_or((&[], 0))
     }
 
     fn get_linker(&self, syllable: Syllable) -> Chord {
@@ -982,6 +1007,10 @@ pub struct Syllable<'w> {
 }
 
 impl<'w> Syllable<'w> {
+    fn range(&self) -> Range<usize> {
+        self.indices.onset..self.end
+    }
+
     fn onset_range(&self) -> Range<usize> {
         self.indices.onset..self.indices.vowel
     }
@@ -1124,6 +1153,8 @@ mod tests {
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
     #[test_case("W IH DH D R AO1 AH0 L", "W*EUT/TKROL" ; "withdrawal")]
     #[test_case("S T EY1 SH AH0 N EH2 R IY0", "STAEUGS/A*EURD" ; "stationary")]
+    #[test_case("K AA1 N F AH0 D EH2 N S", "KWU/TKEPBS" ; "confidence")]
+    #[test_case("P IH1 JH AH0 N Z", "PEUGSZ" ; "pigeons")]
     fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
