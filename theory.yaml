@@ -266,6 +266,12 @@ theory:
     "SH AH N":
       - stress: ["None"]
         chords: ["-GS", "*GS"]
+    "ZH AH N":
+      - stress: ["None"]
+        chords: ["-GS", "*GS"]
+    "JH AH N":
+      - stress: ["None"]
+        chords: ["-GS", "*GS"]
     "SH AH S":
       - stress: ["None"]
         chords: ["-RBS", "*RBS"]
@@ -517,6 +523,18 @@ phonology:
       position: ["Medial", "Final"]
     # "SH AH N" /ʃən/ "-tion", "-sion"
     - onset: "SH"
+      vowel: "AH"
+      coda: "N"
+      stress: ["None"]
+      position: ["Medial", "Final"]
+    # "ZH AH N" /ʒən/ "-tion", "-sion"
+    - onset: "ZH"
+      vowel: "AH"
+      coda: "N"
+      stress: ["None"]
+      position: ["Medial", "Final"]
+    # "JH AH N" /dʒən/ "-gion", "-geon"
+    - onset: "JH"
       vowel: "AH"
       coda: "N"
       stress: ["None"]

@@ -9237,6 +9237,7 @@ dictionaries
 dictionary
 dictum
 did
+didn't
 didactic
 didactically
 diddle
@@ -10083,6 +10084,7 @@ donkey
 donning
 donnybrook
 donor
+don't
 donut
 doodad
 doodle
@@ -12793,6 +12795,7 @@ fiberglass
 fiberoptic
 fibers
 fibril
+fibrous
 fickle
 fiction
 fictional
@@ -34849,6 +34852,7 @@ thankful
 thanking
 thanks
 that
+that's
 thatch
 thaw
 thawed
@@ -38444,6 +38448,7 @@ wombat
 women
 womenfolks
 won
+won't
 wonder
 wondered
 wonderful
