@@ -424,6 +424,28 @@ enum OutputRules {
     Complex(Rc<[OutputRule]>),
 }
 
+impl RuleIter for OutputRules {
+    type Output<'t> = &'t [Chord];
+
+    fn matches_at<'t>(
+        &'t self,
+        syllable: Syllable,
+        range: Range<usize>,
+    ) -> Option<Self::Output<'t>> {
+        match self {
+            Self::Simple(chords) => Some(chords),
+            Self::Complex(rules) => rules
+                .iter()
+                .find(|rule| rule.matches_at(syllable, range.clone()))
+                .map(|rule| &*rule.chords),
+        }
+    }
+
+    fn default_output<'t>() -> Self::Output<'t> {
+        &[]
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 struct OutputRule {
     prev: Option<Pronunciation>,
@@ -645,14 +667,31 @@ impl Theory {
     }
 }
 
-struct MatchChordIter<'t, 'w> {
-    map: &'t PronunciationMap<OutputRules>,
+struct PronunciationMapIter<'t, 'w, T> {
+    map: &'t PronunciationMap<T>,
     syllable: Syllable<'w>,
     range: Range<usize>,
 }
 
-impl<'t, 'w> Iterator for MatchChordIter<'t, 'w> {
-    type Item = &'t [Chord];
+trait RuleIter {
+    type Output<'t>
+    where
+        Self: 't;
+
+    fn matches_at<'t>(
+        &'t self,
+        syllable: Syllable,
+        range: Range<usize>,
+    ) -> Option<Self::Output<'t>>;
+
+    fn default_output<'t>() -> Self::Output<'t>;
+}
+
+impl<'t, 'w, T> Iterator for PronunciationMapIter<'t, 'w, T>
+where
+    T: RuleIter,
+{
+    type Item = T::Output<'t>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.range.is_empty() {
@@ -662,28 +701,22 @@ impl<'t, 'w> Iterator for MatchChordIter<'t, 'w> {
         let max_len = self.map.max_key_len.min(self.range.end - self.range.start);
         // check prefixes in descending order
         for len in (self.map.min_key_len..=max_len).rev() {
-            let slice = &self.syllable.word[start..start + len];
-            let chords = match self.map.map.get(slice) {
-                Some(OutputRules::Simple(chords)) => chords,
-                Some(OutputRules::Complex(rules)) => {
-                    if let Some(chords) = rules
-                        .iter()
-                        .find(|rule| rule.matches_at(self.syllable, start..start + len))
-                        .map(|rule| &*rule.chords)
-                    {
-                        chords
-                    } else {
-                        continue;
-                    }
-                }
-                None => continue,
+            let range = start..start + len;
+            let slice = &self.syllable.word[range.clone()];
+            let Some(chords) = self
+                .map
+                .map
+                .get(slice)
+                .and_then(|rule| rule.matches_at(self.syllable, range))
+            else {
+                continue;
             };
             self.range.start += len;
             return Some(chords);
         }
         // no matches
         self.range.start += 1;
-        Some(&[])
+        Some(T::default_output())
     }
 }
 
