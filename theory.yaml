@@ -248,16 +248,22 @@ theory:
         chords: ["K"]
     "D IH S":
       - take_next: "T"
+        position: ["Initial"]
         chords: ["STK"]
       - take_next: "K"
+        position: ["Initial"]
         chords: ["STK"]
       - take_next: "G"
+        position: ["Initial"]
         chords: ["STKPW"]
-      - chords: ["STK"]
+      - position: ["Initial"]
+        chords: ["STK"]
     "D IH Z":
-      - chords: ["STK"]
+      - position: ["Initial"]
+        chords: ["STK"]
     "D IH":
       - stress: ["None"]
+        position: ["Initial"]
         chords: ["TK"]
   suffixes:
     "K SH AH N":

@@ -98,16 +98,18 @@ impl PhoneticTheory {
     fn outlines_for_syllable(
         &self,
         prev: Option<OutlinePiece>,
-        mut syllable: Syllable,
+        syllable: Syllable,
     ) -> impl IntoIterator<Item = OutlinePiece> {
         let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
-        syllable.skip(prev_skip);
+        let syllable = syllable.skip(prev_skip);
 
         let mut next_outlines = Vec::new();
-        self.prefixes_for_syllable(prev, syllable, &mut next_outlines);
-        self.suffixes_for_syllable(prev, syllable, &mut next_outlines);
+        next_outlines.extend(self.prefixes_for_syllable(prev, syllable));
+        next_outlines.extend(self.suffixes_for_syllable(prev, syllable));
 
-        next_outlines.extend(self.write_outs_for_syllable(prev, syllable));
+        let mut write_out_outlines = vec![self.initial_outline(prev, syllable)];
+        self.write_outs_for_syllable(syllable, &mut write_out_outlines);
+        next_outlines.extend(write_out_outlines);
         next_outlines
     }
 
@@ -157,8 +159,8 @@ impl PhoneticTheory {
         &self,
         prev: Option<OutlinePiece>,
         syllable: Syllable,
-        next_outlines: &mut Vec<OutlinePiece>,
-    ) {
+    ) -> Vec<OutlinePiece> {
+        let mut next_outlines = Vec::new();
         let linker = self.theory.get_linker(syllable);
         let st = prev.and_then(|op| op.is_prefix().then_some(op.stroke));
         let prev_linker = if syllable.onset_range().is_empty() {
@@ -166,7 +168,7 @@ impl PhoneticTheory {
         } else {
             Chord::empty()
         };
-        let (chords, skip) = self.theory.get_prefix(syllable);
+        let SyllableOutput { chords, skip, end } = self.theory.get_prefix(syllable);
         for &ch in chords {
             if let Some(st) = st {
                 if (st & ch).is_empty() && st.before_ignore_star(ch) {
@@ -188,14 +190,19 @@ impl PhoneticTheory {
                 })
             }
         }
+        if end < syllable.end {
+            let syllable = syllable.skip(end - syllable.start());
+            self.write_outs_for_syllable(syllable, &mut next_outlines);
+        }
+        next_outlines
     }
 
     fn suffixes_for_syllable(
         &self,
         prev: Option<OutlinePiece>,
         syllable: Syllable,
-        next_outlines: &mut Vec<OutlinePiece>,
-    ) {
+    ) -> Vec<OutlinePiece> {
+        let mut next_outlines = Vec::new();
         let linker = self.theory.get_linker(syllable);
         let st = prev.map(|op| op.stroke);
         let prev_linker = if syllable.onset_range().is_empty() {
@@ -203,7 +210,7 @@ impl PhoneticTheory {
         } else {
             Chord::empty()
         };
-        let (chords, skip) = self.theory.get_suffix(syllable);
+        let SyllableOutput { chords, skip, end } = self.theory.get_suffix(syllable);
         for &ch in chords {
             match st {
                 Some(st) if (st & ch).is_empty() && st.before_ignore_star(ch) => {
@@ -228,13 +235,14 @@ impl PhoneticTheory {
                 }
             }
         }
+        if end < syllable.end {
+            let syllable = syllable.skip(end - syllable.start());
+            self.write_outs_for_syllable(syllable, &mut next_outlines);
+        }
+        next_outlines
     }
 
-    fn write_outs_for_syllable(
-        &self,
-        prev: Option<OutlinePiece>,
-        syllable: Syllable,
-    ) -> Vec<OutlinePiece> {
+    fn initial_outline(&self, prev: Option<OutlinePiece>, syllable: Syllable) -> OutlinePiece {
         let linker = self.theory.get_linker(syllable);
         let st = prev.and_then(|op| op.is_prefix().then_some(op.stroke));
         let prev_linker = if syllable.onset_range().is_empty() {
@@ -242,13 +250,20 @@ impl PhoneticTheory {
         } else {
             Chord::empty()
         };
-        let mut possible_outlines = vec![OutlinePiece {
+        OutlinePiece {
             stroke: st.unwrap_or(prev_linker),
             linker,
             replace_previous: st.is_some(),
             kind: OutlinePieceKind::WriteOut,
             skip: 0,
-        }];
+        }
+    }
+
+    fn write_outs_for_syllable(
+        &self,
+        syllable: Syllable,
+        possible_outlines: &mut Vec<OutlinePiece>,
+    ) {
         let mut next_outlines = Vec::new();
         for possible_chords in self.theory.onset_matches(syllable) {
             for outline in possible_outlines.drain(..) {
@@ -259,7 +274,7 @@ impl PhoneticTheory {
                     }
                 }
             }
-            std::mem::swap(&mut possible_outlines, &mut next_outlines);
+            std::mem::swap(possible_outlines, &mut next_outlines);
         }
 
         for possible_chords in self.theory.vowel_matches(syllable) {
@@ -271,7 +286,7 @@ impl PhoneticTheory {
                     }
                 }
             }
-            std::mem::swap(&mut possible_outlines, &mut next_outlines);
+            std::mem::swap(possible_outlines, &mut next_outlines);
         }
 
         for possible_chords in self.theory.coda_matches(syllable) {
@@ -283,9 +298,8 @@ impl PhoneticTheory {
                     }
                 }
             }
-            std::mem::swap(&mut possible_outlines, &mut next_outlines);
+            std::mem::swap(possible_outlines, &mut next_outlines);
         }
-        possible_outlines
     }
 }
 
@@ -657,24 +671,34 @@ impl Theory {
         }
     }
 
-    fn get_prefix(&self, syllable: Syllable) -> (&[Chord], usize) {
-        PronunciationMapIter {
+    fn get_prefix(&self, syllable: Syllable) -> SyllableOutput {
+        let mut it = PronunciationMapIter {
             map: &self.prefixes,
             range: syllable.range(),
             syllable,
+        };
+
+        let (chords, skip) = it.next().unwrap_or((&[], 0));
+        SyllableOutput {
+            chords,
+            skip,
+            end: it.range.start,
         }
-        .next()
-        .unwrap_or((&[], 0))
     }
 
-    fn get_suffix(&self, syllable: Syllable) -> (&[Chord], usize) {
-        PronunciationMapIter {
+    fn get_suffix(&self, syllable: Syllable) -> SyllableOutput {
+        let mut it = PronunciationMapIter {
             map: &self.suffixes,
             range: syllable.range(),
             syllable,
+        };
+
+        let (chords, skip) = it .next() .unwrap_or((&[], 0));
+        SyllableOutput {
+            chords,
+            skip,
+            end: it.range.start,
         }
-        .next()
-        .unwrap_or((&[], 0))
     }
 
     fn get_linker(&self, syllable: Syllable) -> Chord {
@@ -687,6 +711,12 @@ impl Theory {
             Chord::empty()
         }
     }
+}
+
+struct SyllableOutput<'t> {
+    chords: &'t [Chord],
+    skip: usize,
+    end: usize,
 }
 
 struct PronunciationMapIter<'t, 'w, T> {
@@ -1005,7 +1035,11 @@ pub struct Syllable<'w> {
 
 impl<'w> Syllable<'w> {
     fn range(&self) -> Range<usize> {
-        self.indices.onset..self.end
+        self.start()..self.end
+    }
+
+    fn start(&self) -> usize {
+        self.indices.onset
     }
 
     fn onset_range(&self) -> Range<usize> {
@@ -1029,11 +1063,12 @@ impl<'w> Syllable<'w> {
     }
 
     /// Skips the first `skip` phonemes of the syllable
-    fn skip(&mut self, skip: usize) {
+    fn skip(mut self, skip: usize) -> Self {
         self.indices.onset += skip;
         self.indices.vowel = self.indices.vowel.max(self.indices.onset);
         self.indices.coda = self.indices.coda.max(self.indices.onset);
         self.end = self.end.max(self.indices.onset);
+        self
     }
 
     /// Returns the part of the syllable up to the specified index into the word.
@@ -1150,7 +1185,7 @@ mod tests {
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
     #[test_case("W IH DH D R AO1 AH0 L", "W*EUT/TKROL" ; "withdrawal")]
     #[test_case("S T EY1 SH AH0 N EH2 R IY0", "STAEUGS/A*EURD" ; "stationary")]
-    #[test_case("K AA1 N F AH0 D EH2 N S", "KWU/TKEPBS" ; "confidence")]
+    #[test_case("K AA1 N F AH0 D EH2 N S", "K-F/TKEPBS" ; "confidence")]
     #[test_case("P IH1 JH AH0 N Z", "PEUGSZ" ; "pigeons")]
     fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
         let expected_outline = expected_outline.parse::<Outline>()?;
