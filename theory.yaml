@@ -204,6 +204,8 @@ theory:
       - stress: ["None"]
         position: ["Initial"]
         chords: ["KP"]
+    "IH G Z":
+      - chords: ["KP"]
     "IH N T":
       - position: ["Initial"]
         chords: ["SPW"]
@@ -485,6 +487,12 @@ phonology:
     - onset: ""
       vowel: "IH"
       coda: "K S"
+      stress: ["None"]
+      position: ["Initial"]
+    # "IH G Z" /igz/ "ex-"
+    - onset: ""
+      vowel: "IH"
+      coda: "G Z"
       stress: ["None"]
       position: ["Initial"]
     # "IH N T" /int/ "int-"
