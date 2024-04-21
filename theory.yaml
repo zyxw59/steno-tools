@@ -361,14 +361,10 @@ theory:
       - stress: ["None"]
         position: ["Final", "Medial"]
         chords: ["-L"]
-    "Z":
+    "IH Z":
       - stress: ["None"]
         position: ["Final"]
         chords: ["-Z"]
-    "D":
-      - stress: ["None"]
-        position: ["Final"]
-        chords: ["-D"]
 
   spelling_conflicts:
     - chord: "AEU"
@@ -568,7 +564,7 @@ phonology:
       vowel: "AH"
       coda: "L"
       stress: ["None"]
-      position: ["Medial", "Final"]
+      position: ["Final"]
     # "AH" /ə/ (medial schwa)
     - onset: ""
       vowel: "AH"
@@ -621,5 +617,11 @@ phonology:
     - onset: ""
       vowel: "IH"
       coda: "D"
+      stress: ["None"]
+      position: ["Final"]
+    # "IH Z" /iz/ "-es"
+    - onset: ""
+      vowel: "IH"
+      coda: "Z"
       stress: ["None"]
       position: ["Final"]

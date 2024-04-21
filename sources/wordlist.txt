@@ -25862,6 +25862,7 @@ preferred
 preferring
 prefers
 prefix
+prefixes
 preflight
 preformatted
 preg
@@ -27870,6 +27871,7 @@ reequip
 reestablish
 reevaluate
 ref
+refactor
 refactoring
 refectory
 refer
@@ -33614,6 +33616,7 @@ sufficient
 sufficiently
 sufficing
 suffix
+suffixes
 suffocate
 suffocation
 suffrage
@@ -38742,7 +38745,6 @@ yob
 yodel
 yodeled
 yodeling
-yodelling
 yoga
 yogi
 yogurt
