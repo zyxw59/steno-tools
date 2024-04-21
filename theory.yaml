@@ -204,8 +204,27 @@ theory:
       - stress: ["None"]
         position: ["Initial"]
         chords: ["KP"]
+    "EH K S":
+      - take_next: "P"
+        position: ["Initial"]
+        chords: ["KP"]
+      - take_next: "K"
+        position: ["Initial"]
+        chords: ["KP"]
+      - take_next: "T"
+        position: ["Initial"]
+        chords: ["KP"]
+      - take_next: "CH"
+        position: ["Initial"]
+        chords: ["KPH"]
+      - position: ["Initial"]
+        chords: ["KP"]
     "IH G Z":
-      - chords: ["KP"]
+      - position: ["Initial"]
+        chords: ["KP"]
+    "EH G Z":
+      - position: ["Initial"]
+        chords: ["KP"]
     "IH N T":
       - position: ["Initial"]
         chords: ["SPW"]
@@ -489,11 +508,21 @@ phonology:
       coda: "K S"
       stress: ["None"]
       position: ["Initial"]
+    # "EH K S" /eks/ "ex-"
+    - onset: ""
+      vowel: "EH"
+      coda: "K S"
+      position: ["Initial"]
     # "IH G Z" /igz/ "ex-"
     - onset: ""
       vowel: "IH"
       coda: "G Z"
       stress: ["None"]
+      position: ["Initial"]
+    # "EH G Z" /egz/ "ex-"
+    - onset: ""
+      vowel: "EH"
+      coda: "G Z"
       position: ["Initial"]
     # "IH N T" /int/ "int-"
     - onset: ""
