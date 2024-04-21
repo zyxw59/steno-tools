@@ -98,8 +98,11 @@ impl PhoneticTheory {
     fn outlines_for_syllable(
         &self,
         prev: Option<OutlinePiece>,
-        syllable: Syllable,
+        mut syllable: Syllable,
     ) -> impl IntoIterator<Item = OutlinePiece> {
+        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
+        syllable.skip(prev_skip);
+
         let mut next_outlines = Vec::new();
         self.prefixes_for_syllable(prev, syllable, &mut next_outlines);
         self.suffixes_for_syllable(prev, syllable, &mut next_outlines);
@@ -153,13 +156,11 @@ impl PhoneticTheory {
     fn prefixes_for_syllable(
         &self,
         prev: Option<OutlinePiece>,
-        mut syllable: Syllable,
+        syllable: Syllable,
         next_outlines: &mut Vec<OutlinePiece>,
     ) {
         let linker = self.theory.get_linker(syllable);
         let st = prev.and_then(|op| op.is_prefix().then_some(op.stroke));
-        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
-        syllable.skip(prev_skip);
         let prev_linker = if syllable.onset_range().is_empty() {
             prev.map(|piece| piece.linker).unwrap_or_default()
         } else {
@@ -192,13 +193,11 @@ impl PhoneticTheory {
     fn suffixes_for_syllable(
         &self,
         prev: Option<OutlinePiece>,
-        mut syllable: Syllable,
+        syllable: Syllable,
         next_outlines: &mut Vec<OutlinePiece>,
     ) {
         let linker = self.theory.get_linker(syllable);
         let st = prev.map(|op| op.stroke);
-        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
-        syllable.skip(prev_skip);
         let prev_linker = if syllable.onset_range().is_empty() {
             prev.map(|piece| piece.linker).unwrap_or_default()
         } else {
@@ -234,11 +233,9 @@ impl PhoneticTheory {
     fn write_outs_for_syllable(
         &self,
         prev: Option<OutlinePiece>,
-        mut syllable: Syllable,
+        syllable: Syllable,
     ) -> Vec<OutlinePiece> {
         let linker = self.theory.get_linker(syllable);
-        let prev_skip = prev.map(|op| op.skip).unwrap_or(0);
-        syllable.skip(prev_skip);
         let st = prev.and_then(|op| op.is_prefix().then_some(op.stroke));
         let prev_linker = if syllable.onset_range().is_empty() {
             prev.map(|piece| piece.linker).unwrap_or_default()
