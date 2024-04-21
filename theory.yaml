@@ -286,6 +286,10 @@ theory:
       - stress: ["None"]
         position: ["Initial"]
         chords: ["TK"]
+    "ER":
+      - stress: ["None"]
+        position: ["Medial"]
+        chords: ["R"]
   suffixes:
     "K SH AH N":
       - stress: ["None"]
@@ -620,7 +624,7 @@ phonology:
       vowel: "ER"
       coda: ""
       stress: ["None"]
-      position: ["Final"]
+      position: ["Medial", "Final"]
     # "IH NG" /iŋ/ "-ing"
     - onset: ""
       vowel: "IH"

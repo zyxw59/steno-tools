@@ -852,6 +852,7 @@ algebra
 algebraic
 algebraically
 algorithm
+algorithmically
 alias
 alibi
 alibis
