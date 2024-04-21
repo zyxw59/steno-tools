@@ -322,6 +322,8 @@ theory:
       - stress: ["None"]
         position: ["Final"]
         chords: ["-LT"]
+    "L AA JH IH K":
+      - chords: ["HROPBLG"]
     "IH T IY":
       - position: ["Final"]
         chords: ["*TD"]
@@ -477,6 +479,7 @@ phonology:
   vowel_clusters:
     - first: ["Y"]
       second: ["UW", "UH", "AH"]
+
   multi_syllables:
     # "IH K S" /iks/ "ex-"
     - onset: ""
@@ -517,6 +520,10 @@ phonology:
       vowel: "IH"
       coda: "L"
       stress: ["Primary", "Secondary"]
+    # "L AA JH IH K"
+    - onset: "L"
+      vowel: "AA"
+      coda: "JH IH K"
     # "K SH AH N" /kʃən/ "-ction"
     - onset: "K SH"
       vowel: "AH"
