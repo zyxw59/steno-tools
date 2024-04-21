@@ -160,7 +160,7 @@ theory:
     "R CH": ["-FRPB"]
     "R B": ["-RB", "*RB"]
     "N CH": ["-FRPB"]
-    "N JH": ["-FPBG"]
+    "N JH": ["-FRPBG"]
     "L CH": ["-LG"]
     "L JH": ["-LG"]
     "L F": ["-FL"]
