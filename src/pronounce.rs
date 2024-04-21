@@ -1,4 +1,4 @@
-use std::{cmp, collections::BTreeMap, fmt, io::BufRead, ops::Deref, rc::Rc};
+use std::{cmp, collections::{BTreeMap, BTreeSet}, fmt, io::BufRead, ops::Deref, rc::Rc};
 
 use anyhow::Context;
 use enumset::EnumSetType;
@@ -39,6 +39,17 @@ impl Dictionary {
     pub fn merge(&mut self, other: Self) {
         for (word, mut prons) in other.entries {
             self.entries.entry(word).or_default().append(&mut prons)
+        }
+    }
+
+    pub fn subtract(&mut self, other: &Self) {
+        for (word, delete_prons) in &other.entries {
+            let delete_prons = delete_prons.iter().collect::<BTreeSet<_>>();
+            if let Some(prons) = self.entries.get_mut(word) {
+                prons.retain(|pron| !delete_prons.contains(pron));
+            } else {
+                eprintln!("warning: {word:?} not found")
+            }
         }
     }
 

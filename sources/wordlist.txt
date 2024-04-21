@@ -4050,7 +4050,6 @@ bruised
 bruiser
 bruisers
 bruising
-bruit
 brunch
 brunched
 brunches
@@ -9237,6 +9236,7 @@ dictionaries
 dictionary
 dictum
 did
+didn't
 didactic
 didactically
 diddle
@@ -10083,6 +10083,7 @@ donkey
 donning
 donnybrook
 donor
+don't
 donut
 doodad
 doodle
@@ -12793,6 +12794,7 @@ fiberglass
 fiberoptic
 fibers
 fibril
+fibrous
 fickle
 fiction
 fictional
@@ -25860,6 +25862,7 @@ preferred
 preferring
 prefers
 prefix
+prefixes
 preflight
 preformatted
 preg
@@ -27868,6 +27871,7 @@ reequip
 reestablish
 reevaluate
 ref
+refactor
 refactoring
 refectory
 refer
@@ -28185,6 +28189,7 @@ relinquishing
 reliquary
 relish
 relive
+reload
 relocate
 relocates
 relocating
@@ -33611,6 +33616,7 @@ sufficient
 sufficiently
 sufficing
 suffix
+suffixes
 suffocate
 suffocation
 suffrage
@@ -34848,6 +34854,7 @@ thankful
 thanking
 thanks
 that
+that's
 thatch
 thaw
 thawed
@@ -38443,6 +38450,7 @@ wombat
 women
 womenfolks
 won
+won't
 wonder
 wondered
 wonderful
@@ -38737,7 +38745,6 @@ yob
 yodel
 yodeled
 yodeling
-yodelling
 yoga
 yogi
 yogurt

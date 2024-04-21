@@ -248,22 +248,34 @@ theory:
         chords: ["K"]
     "D IH S":
       - take_next: "T"
+        position: ["Initial"]
         chords: ["STK"]
       - take_next: "K"
+        position: ["Initial"]
         chords: ["STK"]
       - take_next: "G"
+        position: ["Initial"]
         chords: ["STKPW"]
-      - chords: ["STK"]
+      - position: ["Initial"]
+        chords: ["STK"]
     "D IH Z":
-      - chords: ["STK"]
+      - position: ["Initial"]
+        chords: ["STK"]
     "D IH":
       - stress: ["None"]
+        position: ["Initial"]
         chords: ["TK"]
   suffixes:
     "K SH AH N":
       - stress: ["None"]
         chords: ["-BGS", "*BGS"]
     "SH AH N":
+      - stress: ["None"]
+        chords: ["-GS", "*GS"]
+    "ZH AH N":
+      - stress: ["None"]
+        chords: ["-GS", "*GS"]
+    "JH AH N":
       - stress: ["None"]
         chords: ["-GS", "*GS"]
     "SH AH S":
@@ -287,6 +299,9 @@ theory:
       - stress: ["None"]
         position: ["Medial"]
         chords: ["", "U"]
+      - stress: ["None"]
+        position: ["Initial"]
+        chords: ["A"]
     "ER":
       - stress: ["None"]
         position: ["Final"]
@@ -346,14 +361,10 @@ theory:
       - stress: ["None"]
         position: ["Final", "Medial"]
         chords: ["-L"]
-    "Z":
+    "IH Z":
       - stress: ["None"]
         position: ["Final"]
         chords: ["-Z"]
-    "D":
-      - stress: ["None"]
-        position: ["Final"]
-        chords: ["-D"]
 
   spelling_conflicts:
     - chord: "AEU"
@@ -433,7 +444,7 @@ theory:
         - pattern: "ed$"
           replace: "-D"
         - pattern: "t$"
-          replace: "-FT"
+          replace: "-T"
 
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
@@ -518,6 +529,18 @@ phonology:
       coda: "N"
       stress: ["None"]
       position: ["Medial", "Final"]
+    # "ZH AH N" /ʒən/ "-tion", "-sion"
+    - onset: "ZH"
+      vowel: "AH"
+      coda: "N"
+      stress: ["None"]
+      position: ["Medial", "Final"]
+    # "JH AH N" /dʒən/ "-gion", "-geon"
+    - onset: "JH"
+      vowel: "AH"
+      coda: "N"
+      stress: ["None"]
+      position: ["Medial", "Final"]
     # "IH T IY" /itij/ "-ity"
     - onset: ""
       vowel: "IH"
@@ -541,7 +564,7 @@ phonology:
       vowel: "AH"
       coda: "L"
       stress: ["None"]
-      position: ["Medial", "Final"]
+      position: ["Final"]
     # "AH" /ə/ (medial schwa)
     - onset: ""
       vowel: "AH"
@@ -594,5 +617,11 @@ phonology:
     - onset: ""
       vowel: "IH"
       coda: "D"
+      stress: ["None"]
+      position: ["Final"]
+    # "IH Z" /iz/ "-es"
+    - onset: ""
+      vowel: "IH"
+      coda: "Z"
       stress: ["None"]
       position: ["Final"]
