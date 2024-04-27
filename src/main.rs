@@ -13,6 +13,7 @@ mod chord;
 mod compound_words;
 mod dictionary;
 mod generated;
+mod phonology;
 mod pronounce;
 mod theory;
 mod tree;
