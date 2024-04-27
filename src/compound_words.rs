@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{pronounce::{self, DictionaryEntry, Pronunciation}, dictionary::Word};
+use crate::{
+    dictionary::Word,
+    pronounce::{self, DictionaryEntry, Pronunciation},
+};
 
 #[derive(Debug, serde::Serialize)]
 pub struct CompoundWords {
@@ -14,7 +17,10 @@ impl From<&pronounce::Dictionary> for CompoundWords {
         let mut ambiguous = BTreeMap::new();
         for (word, pronunciation) in dictionary.entries() {
             let mut splits = get_splits(word, pronunciation, dictionary);
-            let entry = DictionaryEntry { word: word.clone(), pronunciation: pronunciation.clone() };
+            let entry = DictionaryEntry {
+                word: word.clone(),
+                pronunciation: pronunciation.clone(),
+            };
             if splits.len() > 1 {
                 ambiguous.insert(entry, splits);
             } else if let Some(split) = splits.pop_first() {
@@ -25,7 +31,11 @@ impl From<&pronounce::Dictionary> for CompoundWords {
     }
 }
 
-pub fn get_unambiguous_split(word: &Word, pronunciation: &Pronunciation, dictionary: &pronounce::Dictionary) -> Option<[DictionaryEntry; 2]> {
+pub fn get_unambiguous_split(
+    word: &Word,
+    pronunciation: &Pronunciation,
+    dictionary: &pronounce::Dictionary,
+) -> Option<[DictionaryEntry; 2]> {
     let mut splits = get_splits(word, pronunciation, dictionary);
     if splits.len() > 1 {
         None

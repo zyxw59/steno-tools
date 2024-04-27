@@ -1,4 +1,11 @@
-use std::{cmp, collections::{BTreeMap, BTreeSet}, fmt, io::BufRead, ops::Deref, rc::Rc};
+use std::{
+    cmp,
+    collections::{BTreeMap, BTreeSet},
+    fmt,
+    io::BufRead,
+    ops::Deref,
+    rc::Rc,
+};
 
 use anyhow::Context;
 use enumset::EnumSetType;
@@ -62,7 +69,9 @@ impl Dictionary {
 
     pub fn entries(&self) -> impl Iterator<Item = (&Word, &Pronunciation)> {
         self.entries.iter().flat_map(|(word, pronunciations)| {
-            pronunciations.iter().map(move |pronunciation| (word, pronunciation))
+            pronunciations
+                .iter()
+                .map(move |pronunciation| (word, pronunciation))
         })
     }
 
