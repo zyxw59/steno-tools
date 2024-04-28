@@ -10,7 +10,7 @@ wordlist = sources/wordlist.txt
 theory = theory.yaml
 overrides = sources/overrides.yaml
 
-.PHONY: all summary
+.PHONY: all summary test
 all: summary $(plover-dict) $(generated-dict)
 
 $(plover-dict): $(generated-dict)
@@ -30,3 +30,6 @@ $(steno-tools-bin): $(rust-sources) Cargo.toml Cargo.lock
 
 summary: $(generated-dict)
 	jq 'map_values(length)' $(generated-dict)
+
+test: $(rust-sources) Cargo.toml Cargo.lock $(theory)
+	cargo test
