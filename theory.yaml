@@ -62,6 +62,9 @@ theory:
       - next: "V"
         chords: ["KWRU"]
       - chords: ["KWRUR"]
+    "IY EY": ["KWRAEU", "AEU", "A*EU"]
+    "IY AH": ["KWRA", "AOE", "AO*E"]
+    "IY AE": ["KWRA", "A", "A*"]
   linkers:
     "AY": "KWR"
     "EY": "KWR"
@@ -504,6 +507,8 @@ phonology:
   vowel_clusters:
     - first: ["Y"]
       second: ["UW", "UH", "AH"]
+    - first: ["IY"]
+      second: ["AH", "AE", "EY"]
 
   multi_syllables:
     # "IH K S" /iks/ "ex-"

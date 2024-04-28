@@ -21,13 +21,14 @@ struct RawCluster {
 #[derive(Debug, Default, Clone, Deserialize)]
 #[serde(from = "Vec<RawCluster>")]
 struct ClusterMap {
-    map: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
+    backwards_map: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
+    forwards_map: BTreeMap<Phoneme, BTreeSet<Phoneme>>,
 }
 
 impl ClusterMap {
     /// Finds the maximal cluster within the range of indices in the word, anchored at the end.
     /// Returns the start index of the cluster.
-    pub fn find(
+    pub fn find_backwards(
         &self,
         word: &[Phoneme],
         range: Range<usize>,
@@ -35,7 +36,7 @@ impl ClusterMap {
     ) -> usize {
         let empty_set = BTreeSet::new();
         let mut allowed_phonemes = initial
-            .or_else(|| self.map.get(&word[range.end]))
+            .or_else(|| self.backwards_map.get(&word[range.end]))
             .unwrap_or(&empty_set);
         word[range.clone()]
             .iter()
@@ -43,26 +44,54 @@ impl ClusterMap {
                 if !allowed_phonemes.contains(ph) {
                     return true;
                 }
-                allowed_phonemes = self.map.get(ph).unwrap_or(&empty_set);
+                allowed_phonemes = self.backwards_map.get(ph).unwrap_or(&empty_set);
                 false
             })
             .map(|idx| idx + 1 + range.start)
             .unwrap_or(range.start)
     }
+
+    /// Finds the maximal cluster starting at the specified index.
+    /// Returns the index after the end of the cluster
+    pub fn find_forwards(&self, word: &[Phoneme], start: usize) -> usize {
+        let empty_set = BTreeSet::new();
+        let mut allowed_phonemes = self.forwards_map.get(&word[start]).unwrap_or(&empty_set);
+        word[start + 1..]
+            .iter()
+            .position(|ph| {
+                if !allowed_phonemes.contains(ph) {
+                    return true;
+                }
+                allowed_phonemes = self.forwards_map.get(ph).unwrap_or(&empty_set);
+                false
+            })
+            .map(|idx| idx + 1 + start)
+            .unwrap_or(start + 1)
+    }
 }
 
 impl From<Vec<RawCluster>> for ClusterMap {
     fn from(raw_clusters: Vec<RawCluster>) -> Self {
-        // map (second_consonant -> [first_consonants])
-        let mut map = BTreeMap::<_, BTreeSet<_>>::new();
+        let mut forwards_map = BTreeMap::<_, BTreeSet<_>>::new();
+        let mut backwards_map = BTreeMap::<_, BTreeSet<_>>::new();
         for cluster in raw_clusters {
+            for ph in &cluster.first {
+                forwards_map
+                    .entry(ph.clone())
+                    .or_default()
+                    .extend(cluster.second.iter().cloned());
+            }
             for ph in cluster.second {
-                map.entry(ph)
+                backwards_map
+                    .entry(ph)
                     .or_default()
                     .extend(cluster.first.iter().cloned());
             }
         }
-        Self { map }
+        Self {
+            forwards_map,
+            backwards_map,
+        }
     }
 }
 
@@ -165,13 +194,19 @@ impl Phonology {
             };
         };
         vowel += start_at;
-        let stress = word[vowel].stress();
-        let coda = vowel + 1;
-        vowel = self.vowel_clusters.find(word, start_at..vowel, None);
+        let coda = self.vowel_clusters.find_forwards(word, vowel);
+        vowel = self
+            .vowel_clusters
+            .find_backwards(word, start_at..vowel, None);
+        let stress = word[vowel..coda]
+            .iter()
+            .map(Phoneme::stress)
+            .max()
+            .unwrap_or(Stress::None);
         // work backwards to find the maximally valid onset
-        let onset = self
-            .onset_clusters
-            .find(word, start_at..vowel, Some(&self.onset_singles));
+        let onset =
+            self.onset_clusters
+                .find_backwards(word, start_at..vowel, Some(&self.onset_singles));
         SyllableIndices {
             stress,
             onset,
@@ -400,6 +435,7 @@ mod tests {
         "L AH1/V AH0 B/AH0 L",
         "L AH1/V AH0/B AH0 L",
     ] ; "loveable")]
+    #[test_case("K R IY0 EY1 SH AH0 N", &["K R IY0 EY1/SH AH0 N", "K R IY0 EY1/SH AH0 N"] ; "creation")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;
