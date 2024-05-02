@@ -583,6 +583,7 @@ impl SyllableRule {
 #[serde(try_from = "RawSpellingConflict")]
 struct SpellingConflict {
     chord: Chord,
+    exclude: Chord,
     pattern: RegexSet,
     replacements: Rc<[Chord]>,
 }
@@ -602,6 +603,9 @@ impl SpellingConflict {
         if !stroke.contains(self.chord) {
             return None;
         }
+        if !(stroke & self.exclude).is_empty() {
+            return None;
+        }
         let idx = self.pattern.matches(word).iter().next()?;
         stroke.try_replace(self.chord, self.replacements[idx])
     }
@@ -610,6 +614,8 @@ impl SpellingConflict {
 #[derive(Deserialize)]
 struct RawSpellingConflict {
     chord: Chord,
+    #[serde(default)]
+    exclude: Chord,
     rules: Box<[RawSpellingRule]>,
 }
 
@@ -627,6 +633,7 @@ impl TryFrom<RawSpellingConflict> for SpellingConflict {
         let replacements = raw.rules.iter().map(|rule| rule.replace).collect();
         Ok(Self {
             chord: raw.chord,
+            exclude: raw.exclude,
             pattern,
             replacements,
         })

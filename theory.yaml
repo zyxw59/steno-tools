@@ -416,12 +416,14 @@ theory:
 
   spelling_conflicts:
     - chord: "AEU"
+      exclude: "O"
       rules:
         - pattern: "[ae][iy]"
           replace: "AEU"
         - pattern: "a.[aeiouy]"
           replace: "AE"
     - chord: "AOE"
+      exclude: "U"
       rules:
         - pattern: "ee|e.[aeiouy]"
           replace: "AOE"
@@ -448,18 +450,21 @@ theory:
         - pattern: "r"
           replace: "R"
     - chord: "AO"
+      exclude: "EU"
       rules:
         - pattern: "ew"
           replace: "AOU"
         - pattern: "ue"
           replace: "AO"
     - chord: "OE"
+      exclude: "AU"
       rules:
         - pattern: "oa"
           replace: "AO"
         - pattern: "o.[aeiouy]"
           replace: "OE"
     - chord: "OL"
+      exclude: "AEU"
       rules:
         - pattern: "oll"
           replace: "OL"
@@ -468,6 +473,7 @@ theory:
         - pattern: "ol[aeiouy]"
           replace: "OEL"
     - chord: "O"
+      exclude: "AEU"
       rules:
         - pattern: "[ao]u"
           replace: "AU"
@@ -476,6 +482,7 @@ theory:
         - pattern: "o"
           replace: "O"
     - chord: "PHUPB"
+      exclude: "AOE"
       rules:
         - pattern: "man"
           replace: "PHAPB"

@@ -2106,6 +2106,8 @@ augmentation
 augmented
 augments
 august
+auk
+auks
 aunt
 auntie
 aura
