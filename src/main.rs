@@ -13,6 +13,7 @@ mod chord;
 mod compound_words;
 mod dictionary;
 mod generated;
+mod phonology;
 mod pronounce;
 mod theory;
 mod tree;
@@ -171,7 +172,8 @@ impl GenerateOutlines {
             },
         )?;
         if let Some(filename) = &self.delete_pronunciations {
-            let delete_pronunciations = pronounce::Dictionary::load(BufReader::new(File::open(filename)?))?;
+            let delete_pronunciations =
+                pronounce::Dictionary::load(BufReader::new(File::open(filename)?))?;
             pronunciation_dict.subtract(&delete_pronunciations);
         }
         let theory: theory::PhoneticTheory =
@@ -355,8 +357,10 @@ impl AllOutlines {
         for pron in prons {
             println!("{pron}:");
             match theory.get_outlines_vec(pron) {
-                Ok(outlines) => for outline in outlines {
-                    println!("{outline}");
+                Ok(outlines) => {
+                    for outline in outlines {
+                        println!("{outline}");
+                    }
                 }
                 Err(err) => eprintln!("{err}"),
             }

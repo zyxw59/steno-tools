@@ -290,7 +290,10 @@ impl FromIterator<Chord> for Outline {
     }
 }
 
-impl<T> From<T> for Outline where Rc<[Chord]>: From<T> {
+impl<T> From<T> for Outline
+where
+    Rc<[Chord]>: From<T>,
+{
     fn from(val: T) -> Self {
         Self(val.into())
     }
