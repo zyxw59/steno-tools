@@ -266,7 +266,25 @@ theory:
       - position: ["Initial"]
         stress: ["None"]
         chords: ["K"]
+    "K AA":
+      - take_next: "N"
+        position: ["Initial"]
+        chords: ["KPH"]
+      - take_next: "M"
+        position: ["Initial"]
+        chords: ["KPH"]
+    "K AO":
+      - take_next: "N"
+        position: ["Initial"]
+        chords: ["KPH"]
+      - take_next: "M"
+        position: ["Initial"]
+        chords: ["KPH"]
     "K AH":
+      - take_next: "N"
+        position: ["Initial"]
+        stress: ["None"]
+        chords: ["KPH"]
       - position: ["Initial"]
         stress: ["None"]
         chords: ["K"]
