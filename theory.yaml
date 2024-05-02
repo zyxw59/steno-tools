@@ -475,6 +475,12 @@ theory:
           replace: "-D"
         - pattern: "t$"
           replace: "-T"
+    - chord: "-R"
+      rules:
+        - pattern: "er$"
+          replace: "-R"
+        - pattern: "or$"
+          replace: "*R"
 
 phonology:
   onset_singles: ["B", "D", "JH", "F", "G", "HH", "Y", "K", "L", "M", "N", "P",
