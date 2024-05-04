@@ -26311,6 +26311,8 @@ projection
 projectionist
 projector
 projects
+prokaryote
+prokaryotic
 prolapse
 prole
 proles
@@ -26884,7 +26886,6 @@ pyromania
 pyromaniac
 pyrotechnic
 python
-qt
 qua
 quack
 quackery

@@ -338,6 +338,9 @@ theory:
     "AH B AH L":
       - stress: ["None"]
         chords: ["-BL"]
+    "AH B L IY":
+      - stress: ["None"]
+        chords: ["*BL"]
     "AH B IH L":
       - position: ["Medial"]
         chords: ["-BL"]
@@ -386,11 +389,11 @@ theory:
         position: ["Final"]
         chords: ["*TSDZ"]
     "L IY":
-      - stress: ["None"]
+      - stress: ["None", "Secondary"]
         position: ["Final"]
         chords: ["*L"]
     "IY":
-      - stress: ["None"]
+      - stress: ["None", "Secondary"]
         position: ["Final"]
         chords: ["*D"]
     "IY Z":
@@ -592,6 +595,13 @@ phonology:
       vowel: "AH"
       coda: "B AH L"
       stress: ["None"]
+      position: ["Final", "Medial"]
+    # "AH B L IY" /əblij/ "-ably", "-ibly"
+    - onset: ""
+      vowel: "AH"
+      coda: "B L IY"
+      position: ["Final"]
+      stress: ["None"]
     # "AH B IH L" /əbil/ "-abil-", "-ibil-"
     - onset: "AH B"
       vowel: "IH"
@@ -683,13 +693,13 @@ phonology:
     - onset: "L"
       vowel: "IY"
       coda: ""
-      stress: ["None"]
+      stress: ["None", "Secondary"]
       position: ["Final"]
     # "IY" /ij/ "-y", "-ie"
     - onset: ""
       vowel: "IY"
       coda: ""
-      stress: ["None"]
+      stress: ["None", "Secondary"]
       position: ["Final"]
     # "IY Z" /ijz/ "-ies"
     - onset: ""
