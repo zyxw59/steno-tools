@@ -412,6 +412,10 @@ theory:
       - stress: ["None"]
         position: ["Final", "Medial"]
         chords: ["-L"]
+    "AH N":
+      - stress: ["None"]
+        position: ["Final", "Medial"]
+        chords: ["-PB", "*PB", "UPB"]
     "IH Z":
       - stress: ["None"]
         position: ["Final"]
@@ -659,16 +663,34 @@ phonology:
       coda: "L"
       stress: ["None"]
       position: ["Final"]
+    # "M AH N" /mən/ "-man","-men"
+    - onset: "M"
+      vowel: "AH"
+      coda: "N"
+      stress: ["None"]
+      position: ["Final"]
     # "AH" /ə/ (medial schwa)
     - onset: ""
       vowel: "AH"
       coda: ""
       stress: ["None"]
       position: ["Medial"]
+    # "AH N" /ən/ "-en"
+    - onset: ""
+      vowel: "AH"
+      coda: "N"
+      stress: ["None"]
+      position: ["Final", "Medial"]
     # "ER" /ər/ "-er", "-or"
     - onset: ""
       vowel: "ER"
       coda: ""
+      stress: ["None"]
+      position: ["Medial", "Final"]
+    # "ER Z" /ərz/ "-ers", "-ors"
+    - onset: ""
+      vowel: "ER"
+      coda: "Z"
       stress: ["None"]
       position: ["Medial", "Final"]
     # "IH NG" /iŋ/ "-ing"

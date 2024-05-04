@@ -435,7 +435,11 @@ mod tests {
         "L AH1/V AH0 B/AH0 L",
         "L AH1/V AH0/B AH0 L",
     ] ; "loveable")]
-    #[test_case("K R IY0 EY1 SH AH0 N", &["K R IY0 EY1/SH AH0 N", "K R IY0 EY1/SH AH0 N"] ; "creation")]
+    #[test_case("K R IY0 EY1 SH AH0 N", &[
+        "K R IY0 EY1/SH AH0 N",
+        "K R IY0 EY1 SH/AH0 N",
+        "K R IY0 EY1/SH AH0 N",
+    ] ; "creation")]
     fn syllabification(word: &str, expected_syllables: &[&str]) -> anyhow::Result<()> {
         let theory: PhoneticTheory =
             serde_yaml::from_reader(BufReader::new(File::open("theory.yaml")?))?;

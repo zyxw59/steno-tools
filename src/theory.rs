@@ -523,10 +523,10 @@ impl RuleIter for Rc<[SyllableRule]> {
     fn matches_at<'t>(
         &'t self,
         syllable: Syllable,
-        _range: Range<usize>,
+        range: Range<usize>,
     ) -> Option<Self::Output<'t>> {
         self.iter()
-            .find(|rule| rule.matches(syllable))
+            .find(|rule| rule.matches(syllable, range.clone()))
             .map(SyllableRule::chords_and_skip)
     }
 
@@ -536,7 +536,7 @@ impl RuleIter for Rc<[SyllableRule]> {
 }
 
 impl SyllableRule {
-    fn matches(&self, syllable: Syllable<'_>) -> bool {
+    fn matches(&self, syllable: Syllable<'_>, range: Range<usize>) -> bool {
         [
             Self::matches_stress,
             Self::matches_position,
@@ -545,33 +545,33 @@ impl SyllableRule {
             Self::matches_take_next,
         ]
         .into_iter()
-        .all(|f| f(self, syllable).unwrap_or(true))
+        .all(|f| f(self, syllable, range.clone()).unwrap_or(true))
     }
 
-    fn matches_stress(&self, syllable: Syllable<'_>) -> Option<bool> {
+    fn matches_stress(&self, syllable: Syllable<'_>, _range: Range<usize>) -> Option<bool> {
         self.stress.map(|st| st.contains(syllable.stress()))
     }
 
-    fn matches_position(&self, syllable: Syllable<'_>) -> Option<bool> {
+    fn matches_position(&self, syllable: Syllable<'_>, _range: Range<usize>) -> Option<bool> {
         self.position.map(|pos| pos.contains(syllable.position()))
     }
 
-    fn matches_prev(&self, syllable: Syllable<'_>) -> Option<bool> {
+    fn matches_prev(&self, syllable: Syllable<'_>, range: Range<usize>) -> Option<bool> {
         self.prev
             .as_ref()
-            .map(|p| syllable.word()[..syllable.start()].ends_with(p))
+            .map(|p| syllable.word()[..range.start].ends_with(p))
     }
 
-    fn matches_next(&self, syllable: Syllable<'_>) -> Option<bool> {
+    fn matches_next(&self, syllable: Syllable<'_>, range: Range<usize>) -> Option<bool> {
         self.next
             .as_ref()
-            .map(|p| syllable.word()[syllable.end()..].starts_with(p))
+            .map(|p| syllable.word()[range.end..].starts_with(p))
     }
 
-    fn matches_take_next(&self, syllable: Syllable<'_>) -> Option<bool> {
+    fn matches_take_next(&self, syllable: Syllable<'_>, range: Range<usize>) -> Option<bool> {
         self.take_next
             .as_ref()
-            .map(|p| syllable.word()[syllable.end()..].starts_with(p))
+            .map(|p| syllable.word()[range.end..].starts_with(p))
     }
 
     fn chords_and_skip(&self) -> (&[Chord], usize) {
@@ -798,7 +798,7 @@ mod tests {
     #[test_case("M AE1 R IY0", "PHA*EURD" ; "marry")]
     #[test_case("IH0 K S P EH2 N D", "KPEPBD" ; "expend")]
     #[test_case("IH0 K S CH EY2 N JH", "KPHAEUFRPBG" ; "exchange")]
-    #[test_case("D IH1 S T AH0 N T", "STKUPBT" ; "distant")]
+    #[test_case("D IH1 S T AH0 N T", "STK-PBT" ; "distant")]
     #[test_case("AE1 K SH AH0 N", "ABGS" ; "action")]
     #[test_case("G AH1 M P SH AH0 N", "TKPWUFRPGS" ; "gumption")]
     #[test_case("K AA1 N SH AH0 S", "K-RBS" ; "conscious")]
@@ -806,6 +806,7 @@ mod tests {
     #[test_case("S T EY1 SH AH0 N EH2 R IY0", "STAEUGS/A*EURD" ; "stationary")]
     #[test_case("K AA1 N F AH0 D EH2 N S", "K-F/TKEPBS" ; "confidence")]
     #[test_case("P IH1 JH AH0 N Z", "PEUGSZ" ; "pigeons")]
+    #[test_case("K AO1 R M AH0 N", "KOR/PHUPB" ; "corpsman")]
     fn word_to_outline(pronunciation: &str, expected_outline: &str) -> anyhow::Result<()> {
         let expected_outline = expected_outline.parse::<Outline>()?;
         let theory: PhoneticTheory =
