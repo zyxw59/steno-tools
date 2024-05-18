@@ -8825,6 +8825,7 @@ deplored
 deploy
 deployed
 deployment
+deployments
 depolarization
 depolarize
 depolarizes
