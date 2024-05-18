@@ -100,7 +100,10 @@ theory:
     "V": ["SR", "W"]
     "W": ["W"]
     "Y": ["KWR"]
-    "Z": ["STK", "S*"]
+    "Z":
+      - position: ["Medial"]
+        chords: ["S"]
+      - chords: ["STK", "S*"]
     "ZH": ["SKH"]
     "SH R": ["SHR", "SHR*"]
     "SH L": ["SKHR"]
@@ -311,6 +314,14 @@ theory:
       - stress: ["None"]
         position: ["Medial"]
         chords: ["R"]
+    "IY":
+      - take_next: "AH"
+        stress: ["None", "Secondary"]
+        position: ["Initial", "Medial"]
+        chords: ["KWRA", "AOE", "A*"]
+      - stress: ["None", "Secondary"]
+        position: ["Initial", "Medial"]
+        chords: ["KWR", "*"]
   suffixes:
     "K SH AH N":
       - stress: ["None"]
@@ -722,7 +733,7 @@ phonology:
       vowel: "IY"
       coda: ""
       stress: ["None", "Secondary"]
-      position: ["Final"]
+      position: ["Final", "Medial"]
     # "IY Z" /ijz/ "-ies"
     - onset: ""
       vowel: "IY"

@@ -462,6 +462,7 @@ struct OutputRule {
     next: Option<Pronunciation>,
     next_broad: Option<Pronunciation>,
     stress: Option<EnumSet<Stress>>,
+    position: Option<EnumSet<SyllablePosition>>,
     chords: Rc<[Chord]>,
 }
 
@@ -469,6 +470,7 @@ impl OutputRule {
     fn matches_at(&self, syllable: Syllable<'_>, at: Range<usize>) -> bool {
         [
             Self::matches_stress,
+            Self::matches_position,
             Self::matches_prev,
             Self::matches_next,
             Self::matches_prev_broad,
@@ -480,6 +482,10 @@ impl OutputRule {
 
     fn matches_stress(&self, syllable: Syllable<'_>, _at: Range<usize>) -> Option<bool> {
         self.stress.map(|st| st.contains(syllable.stress()))
+    }
+
+    fn matches_position(&self, syllable: Syllable<'_>, _at: Range<usize>) -> Option<bool> {
+        self.position.map(|pos| pos.contains(syllable.position()))
     }
 
     fn matches_prev(&self, syllable: Syllable<'_>, at: Range<usize>) -> Option<bool> {
