@@ -191,43 +191,43 @@ theory:
       - take_next: "P"
         stress: ["None"]
         position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
       - take_next: "K"
         stress: ["None"]
         position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
       - take_next: "T"
         stress: ["None"]
         position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
       - take_next: "CH"
         stress: ["None"]
         position: ["Initial"]
-        chords: ["KPH"]
+        chords: ["KPH", "SKPH"]
       - stress: ["None"]
         position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
     "EH K S":
       - take_next: "P"
         position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
       - take_next: "K"
         position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
       - take_next: "T"
         position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
       - take_next: "CH"
         position: ["Initial"]
-        chords: ["KPH"]
+        chords: ["KPH", "SKPH"]
       - position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
     "IH G Z":
       - position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
     "EH G Z":
       - position: ["Initial"]
-        chords: ["KP"]
+        chords: ["KP", "SKP"]
     "IH N T":
       - position: ["Initial"]
         chords: ["SPW"]
